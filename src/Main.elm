@@ -1,20 +1,27 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, text, div, h1, img)
+import Html exposing (Html, text, div, h1, button)
+import Html.Events exposing (onClick)
 import Html.Attributes exposing (src)
 
 
 ---- MODEL ----
 
+type alias Habit =  String
 
 type alias Model =
-    {}
+  { habit: Habit, completedToday: Bool }
+
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+  ( {
+    habit = "Log a habit every day"
+    , completedToday = False
+
+  }, Cmd.none )
 
 
 
@@ -22,12 +29,17 @@ init =
 
 
 type Msg
-    = NoOp
+  = CompleteHabit
+  | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+  case msg of
+    CompleteHabit ->
+      ( { model | completedToday = True } , Cmd.none )
+    NoOp ->
+      ( model, Cmd.none )
 
 
 
@@ -36,10 +48,19 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
+  let
+      completedText =
+        if model.completedToday then
+          "Done"
+        else
+          "Not Done"
+  in
     div []
-        [ img [ src "/logo.svg" ] []
-        , h1 [] [ text "Your Elm App is working!" ]
-        ]
+    [
+      h1 [] [ text (model.habit) ]
+      , text completedText
+      , button [ onClick CompleteHabit ] [ text "Done" ]
+    ]
 
 
 
