@@ -1,0 +1,22 @@
+{
+  "name": "building-habits",
+  "version": "1.0.0",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/cli": "^2.4.1",
+    "@capacitor/core": "^2.4.1",
+    "elm-format": "^0.8.3",
+    "tailwindcss": "^1.8.10"
+  },
+  "dependencies": {
+    "@capacitor/android": "2.4.1",
+    "@capacitor/ios": "2.4.1"
+  },
+  "scripts": {
+    "build-css": "npx tailwind build src/main.css -o src/output.css",
+    "build": "elm-format --validate src/ && yarn build-css && elm-app build && npx cap sync",
+    "start": "elm-app start",
+    "open-ios": "npx cap open ios",
+    "open-android": "npx cap open android"
+  }
+}
