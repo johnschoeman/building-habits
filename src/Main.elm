@@ -1,9 +1,9 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, h1, text)
-import Html.Attributes exposing (class, src)
-import Html.Events exposing (onClick)
+import Html exposing (Html, button, div, h1, input, text)
+import Html.Attributes exposing (autofocus, class, placeholder, src, value)
+import Html.Events exposing (onClick, onInput)
 
 
 
@@ -15,13 +15,17 @@ type alias Habit =
 
 
 type alias Model =
-    { habit : Habit, completedToday : Bool }
+    { habit : Habit
+    , completedToday : Bool
+    , editing : Bool
+    }
 
 
 init : ( Model, Cmd Msg )
 init =
     ( { habit = "Log a habit every day"
       , completedToday = False
+      , editing = False
       }
     , Cmd.none
     )
@@ -33,6 +37,8 @@ init =
 
 type Msg
     = CompleteHabit
+    | EditHabit
+    | UpdateHabit Habit
     | NoOp
 
 
@@ -41,6 +47,12 @@ update msg model =
     case msg of
         CompleteHabit ->
             ( { model | completedToday = True }, Cmd.none )
+
+        EditHabit ->
+            ( { model | editing = True }, Cmd.none )
+
+        UpdateHabit habit ->
+            ( { model | habit = habit }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -61,7 +73,13 @@ view model =
                 "Not Done"
     in
     div [ class "flex flex-col items-center" ]
-        [ h1 [ class "mt-8 text-2xl" ] [ text model.habit ]
+        [ input
+            [ placeholder model.habit
+            , autofocus True
+            , value model.habit
+            , onInput UpdateHabit
+            ]
+            []
         , div [] [ text completedText ]
         , button [ class "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded", onClick CompleteHabit ] [ text "Done" ]
         ]
