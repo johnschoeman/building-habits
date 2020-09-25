@@ -1,9 +1,12 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
+import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, input, text)
 import Html.Attributes exposing (autofocus, class, placeholder, src, value)
 import Html.Events exposing (onClick, onInput)
+import Json.Encode as Encode
+import Url
 
 
 
@@ -21,9 +24,13 @@ type alias Model =
     }
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( { habit = "Log a habit every day"
+type alias Flags =
+    String
+
+
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
+    ( { habit = flags
       , completedToday = False
       , editing = False
       }
@@ -39,6 +46,8 @@ type Msg
     = CompleteHabit
     | EditHabit
     | UpdateHabit Habit
+    | ChangedUrl Url.Url
+    | ClickedLink Browser.UrlRequest
     | NoOp
 
 
@@ -52,18 +61,41 @@ update msg model =
             ( { model | editing = True }, Cmd.none )
 
         UpdateHabit habit ->
-            ( { model | habit = habit }, Cmd.none )
+            ( { model | habit = habit }
+            , saveHabit habit
+            )
+
+        ChangedUrl _ ->
+            ( model, Cmd.none )
+
+        ClickedLink _ ->
+            ( model, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
+
+
+port saveUserDataLocally : Encode.Value -> Cmd msg
+
+
+saveHabit : Habit -> Cmd Msg
+saveHabit habit =
+    saveUserDataLocally <| Encode.string habit
 
 
 
 ---- VIEW ----
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
+    { title = "Building Habigs"
+    , body = [ pageContent model ]
+    }
+
+
+pageContent : Model -> Html Msg
+pageContent model =
     let
         completedText =
             if model.completedToday then
@@ -89,11 +121,13 @@ view model =
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
-    Browser.element
+    Browser.application
         { view = view
-        , init = \_ -> init
+        , init = init
         , update = update
         , subscriptions = always Sub.none
+        , onUrlChange = ChangedUrl
+        , onUrlRequest = ClickedLink
         }
