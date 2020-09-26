@@ -11,10 +11,8 @@ serviceWorker.register();
 const localStorageKey = "buildinghabits.userData";
 
 const fetchUserDataFromLocalStorage = () => {
-  const userData = JSON.parse(
-    localStorage.getItem(localStorageKey) || "Add a habit"
-  );
-  return userData;
+  const userData = JSON.parse(localStorage.getItem(localStorageKey));
+  return userData ? userData : "Log a habit right after lunch";
 };
 
 const saveUserDataLocally = (userData) => {

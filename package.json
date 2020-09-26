@@ -5,7 +5,9 @@
   "devDependencies": {
     "@capacitor/cli": "^2.4.1",
     "@capacitor/core": "^2.4.1",
+    "create-elm-app": "^4.2.27",
     "elm-format": "^0.8.3",
+    "replace-in-file-webpack-plugin": "^1.0.6",
     "tailwindcss": "^1.8.10"
   },
   "dependencies": {
@@ -14,7 +16,7 @@
   },
   "scripts": {
     "build-css": "npx tailwind build src/main.css -o src/output.css",
-    "build": "elm-format --validate src/ && yarn build-css && elm-app build && npx cap sync",
+    "build": "elm-format --validate src/ && elm-app build && npx cap sync",
     "start": "elm-app start",
     "open-ios": "npx cap open ios",
     "open-android": "npx cap open android"
