@@ -3,7 +3,7 @@ port module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, input, text)
-import Html.Attributes exposing (autofocus, class, placeholder, src, value)
+import Html.Attributes exposing (autofocus, class, classList, placeholder, src, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Encode as Encode
 import Url
@@ -44,7 +44,6 @@ init flags url key =
 
 type Msg
     = CompleteHabit
-    | EditHabit
     | UpdateHabit Habit
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
@@ -57,11 +56,8 @@ update msg model =
         CompleteHabit ->
             ( { model | completedToday = True }, Cmd.none )
 
-        EditHabit ->
-            ( { model | editing = True }, Cmd.none )
-
         UpdateHabit habit ->
-            ( { model | habit = habit }
+            ( { model | habit = habit, completedToday = False }
             , saveHabit habit
             )
 
@@ -99,22 +95,31 @@ pageContent model =
     let
         completedText =
             if model.completedToday then
-                "Done"
+                "1 of 21 days"
 
             else
-                "Not Done"
+                "0 of 21 days"
     in
-    div [ class "flex flex-col items-center" ]
-        [ input
-            [ placeholder model.habit
-            , autofocus True
-            , value model.habit
-            , onInput UpdateHabit
+    div [ class "flex flex-col items-center h-screen" ]
+        [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
+            [ habitInput model
+            , div [ class secondary ] [ text completedText ]
             ]
-            []
-        , div [] [ text completedText ]
-        , button [ class "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded", onClick CompleteHabit ] [ text "Done" ]
+        , div [ class "flex flex-1 items-center justify-center w-full" ]
+            [ button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
+            ]
         ]
+
+
+habitInput : Model -> Html Msg
+habitInput model =
+    input
+        [ autofocus True
+        , value model.habit
+        , onInput UpdateHabit
+        , classList [ ( header, True ), ( "py-1", True ) ]
+        ]
+        []
 
 
 
@@ -131,3 +136,22 @@ main =
         , onUrlChange = ChangedUrl
         , onUrlRequest = ClickedLink
         }
+
+
+
+---- STYLES ----
+
+
+header : String
+header =
+    "font-display font-bold leading-tight text-4xl text-gray-900"
+
+
+secondary : String
+secondary =
+    "font-body text-gray-700 text-sm"
+
+
+primaryButton : String
+primaryButton =
+    "bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-full"
