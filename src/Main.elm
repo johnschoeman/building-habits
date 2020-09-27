@@ -176,6 +176,19 @@ isSameDay now time =
         && (Time.toDay utc now == Time.toDay utc time)
 
 
+timesHabitWasCompleted : Habit -> HabitLog -> Int
+timesHabitWasCompleted habit habitLog =
+    let
+        isSameHabit habitEntry acc =
+            if habitEntry.habit == habit then
+                acc + 1
+
+            else
+                acc
+    in
+    List.foldl isSameHabit 0 habitLog
+
+
 
 ---- VIEW ----
 
@@ -190,17 +203,16 @@ view model =
 pageContent : Model -> Html Msg
 pageContent model =
     let
-        completedText =
-            if completedToday model then
-                "Done"
+        daysCompleted =
+            timesHabitWasCompleted model.habit model.habitLog
 
-            else
-                " "
+        daysCompletedText =
+            String.fromInt daysCompleted ++ " of 21 days"
     in
     div [ class "flex flex-col items-center h-screen" ]
         [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
             [ habitInput model
-            , div [ class <| secondary ++ " h-2" ] [ text completedText ]
+            , div [ class <| secondary ++ " h-2" ] [ text daysCompletedText ]
             ]
         , div [ class "flex flex-1 items-center justify-center w-full" ]
             [ button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
