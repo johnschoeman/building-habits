@@ -20,19 +20,19 @@ type alias Habit =
     String
 
 
-type alias HabitLog =
+type alias HabitEntry =
     { habit : Habit
     , date : Posix
     }
 
 
-type alias HabitHistory =
-    List HabitLog
+type alias HabitLog =
+    List HabitEntry
 
 
 type alias Model =
     { habit : Habit
-    , habitHistory : HabitHistory
+    , habitLog : HabitLog
     , editing : Bool
     , now : Posix
     }
@@ -40,18 +40,18 @@ type alias Model =
 
 type alias Flags =
     { habit : String
-    , habitHistory : Decode.Value
+    , habitLog : Decode.Value
     }
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
-        habitHistory =
-            decodeHabitHistory flags.habitHistory
+        habitLog =
+            decodeHabitLog flags.habitLog
     in
     ( { habit = flags.habit
-      , habitHistory = habitHistory
+      , habitLog = habitLog
       , editing = False
       , now = Time.millisToPosix 0
       }
@@ -81,14 +81,14 @@ update msg model =
 
         LogHabit now ->
             let
-                habitLog =
+                habitEntry =
                     { habit = model.habit, date = now }
 
-                nextHistory =
-                    habitLog :: model.habitHistory
+                nextLog =
+                    habitEntry :: model.habitLog
             in
-            ( { model | habitHistory = nextHistory }
-            , saveHabitHistory nextHistory
+            ( { model | habitLog = nextLog }
+            , saveHabitLog nextLog
             )
 
         UpdateHabit habit ->
@@ -117,30 +117,30 @@ saveHabit habit =
     saveHabitLocally <| Encode.string habit
 
 
-port saveHabitHistoryLocally : Encode.Value -> Cmd msg
+port saveHabitLogLocally : Encode.Value -> Cmd msg
 
 
-saveHabitHistory : HabitHistory -> Cmd Msg
-saveHabitHistory habitHistory =
-    saveHabitHistoryLocally <| encodeHabitHistory habitHistory
-
-
-encodeHabitHistory : HabitHistory -> Encode.Value
-encodeHabitHistory habitHistory =
-    Encode.list encodeHabitLog habitHistory
+saveHabitLog : HabitLog -> Cmd Msg
+saveHabitLog habitLog =
+    saveHabitLogLocally <| encodeHabitLog habitLog
 
 
 encodeHabitLog : HabitLog -> Encode.Value
-encodeHabitLog log =
+encodeHabitLog habitLog =
+    Encode.list encodeHabitEntry habitLog
+
+
+encodeHabitEntry : HabitEntry -> Encode.Value
+encodeHabitEntry entry =
     Encode.object
-        [ ( "habit", Encode.string log.habit )
-        , ( "date", Encode.int (Time.posixToMillis log.date) )
+        [ ( "habit", Encode.string entry.habit )
+        , ( "date", Encode.int (Time.posixToMillis entry.date) )
         ]
 
 
-decodeHabitHistory : Decode.Value -> HabitHistory
-decodeHabitHistory value =
-    case Decode.decodeValue (Decode.list decodeHabitLog) value of
+decodeHabitLog : Decode.Value -> HabitLog
+decodeHabitLog value =
+    case Decode.decodeValue (Decode.list decodeHabitEntry) value of
         Ok history ->
             history
 
@@ -148,9 +148,9 @@ decodeHabitHistory value =
             []
 
 
-decodeHabitLog : Decode.Decoder HabitLog
-decodeHabitLog =
-    Decode.map2 HabitLog
+decodeHabitEntry : Decode.Decoder HabitEntry
+decodeHabitEntry =
+    Decode.map2 HabitEntry
         (Decode.field "habit" Decode.string)
         (Decode.field "date" Decode.int |> Decode.andThen decodePosix)
 
@@ -161,12 +161,12 @@ decodePosix v =
 
 
 completedToday : Model -> Bool
-completedToday { habit, habitHistory, now } =
+completedToday { habit, habitLog, now } =
     let
         logCompletedToday log =
             log.habit == habit && isSameDay log.date now
     in
-    List.any logCompletedToday habitHistory
+    List.any logCompletedToday habitLog
 
 
 isSameDay : Posix -> Posix -> Bool
@@ -201,7 +201,6 @@ pageContent model =
         [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
             [ habitInput model
             , div [ class <| secondary ++ " h-2" ] [ text completedText ]
-            , div [ class "pt-4" ] (List.take 10 <| List.map habitLogToHtml model.habitHistory)
             ]
         , div [ class "flex flex-1 items-center justify-center w-full" ]
             [ button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
@@ -218,73 +217,6 @@ habitInput model =
         , classList [ ( header, True ), ( "py-1", True ) ]
         ]
         []
-
-
-habitLogToHtml : HabitLog -> Html msg
-habitLogToHtml log =
-    div [ class "flex justify-between" ]
-        [ div
-            [ classList
-                [ ( secondary, True )
-                , ( "w-full truncate flex flex-2", True )
-                ]
-            ]
-            [ text log.habit ]
-        , div [ class <| secondary ++ " flex flex-1" ] [ text <| toUtcString log.date ]
-        ]
-
-
-toUtcString : Posix -> String
-toUtcString time =
-    toDanishMonth (toMonth utc time)
-        ++ "/"
-        ++ String.fromInt (toDay utc time)
-        ++ "/"
-        ++ String.fromInt (toYear utc time)
-        ++ " - "
-        ++ String.fromInt (toHour utc time)
-        ++ ":"
-        ++ String.fromInt (toMinute utc time)
-
-
-toDanishMonth : Month -> String
-toDanishMonth month =
-    case month of
-        Jan ->
-            "01"
-
-        Feb ->
-            "02"
-
-        Mar ->
-            "03"
-
-        Apr ->
-            "04"
-
-        May ->
-            "05"
-
-        Jun ->
-            "06"
-
-        Jul ->
-            "07"
-
-        Aug ->
-            "08"
-
-        Sep ->
-            "09"
-
-        Oct ->
-            "10"
-
-        Nov ->
-            "11"
-
-        Dec ->
-            "12"
 
 
 

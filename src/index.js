@@ -9,15 +9,15 @@ serviceWorker.register();
 
 // Local Storage
 const habitKey = "buildinghabits.habit";
-const habitHistoryKey = "buildinghabits.habit-history";
+const habitLogKey = "buildinghabits.habit-log";
 
 const fetchHabitDataFromLocalStorage = () => {
   const habit = JSON.parse(localStorage.getItem(habitKey));
-  const habitHistory = JSON.parse(localStorage.getItem(habitHistoryKey));
+  const habitLog = JSON.parse(localStorage.getItem(habitLogKey));
 
   return {
     habit: habit || "Log a habit right after lunch",
-    habitHistory: habitHistory || [],
+    habitLog: habitLog || [],
   };
 };
 
@@ -25,8 +25,8 @@ const saveHabitLocally = (habit) => {
   localStorage.setItem(habitKey, JSON.stringify(habit));
 };
 
-const saveHabitHistoryLocally = (habitHistory) => {
-  localStorage.setItem(habitHistoryKey, JSON.stringify(habitHistory));
+const saveHabitLogLocally = (habitLog) => {
+  localStorage.setItem(habitLogKey, JSON.stringify(habitLog));
 };
 
 const localHabitData = fetchHabitDataFromLocalStorage();
@@ -37,10 +37,10 @@ const app = Elm.Main.init({
   flags: localHabitData,
 });
 
-app.ports.saveHabitLocally.subscribe(function (habit) {
+app.ports.saveHabitLocally.subscribe((habit) => {
   saveHabitLocally(habit);
 });
 
-app.ports.saveHabitHistoryLocally.subscribe(function (habitHistory) {
-  saveHabitHistoryLocally(habitHistory);
+app.ports.saveHabitLogLocally.subscribe((habitLog) => {
+  saveHabitLogLocally(habitLog);
 });
