@@ -181,7 +181,7 @@ pageContent model =
         [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
             [ habitInput model
             , div [ class secondary ] [ text completedText ]
-            , div [] (List.take 10 <| List.map habitLogToHtml model.habitHistory)
+            , div [ class "pt-4" ] (List.take 10 <| List.map habitLogToHtml model.habitHistory)
             ]
         , div [ class "flex flex-1 items-center justify-center w-full" ]
             [ button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
@@ -202,61 +202,69 @@ habitInput model =
 
 habitLogToHtml : HabitLog -> Html msg
 habitLogToHtml log =
-    div [ class secondary ] [ text log.habit, text " - ", text <| toUtcString log.date ]
+    div [ class "flex justify-between" ]
+        [ div
+            [ classList
+                [ ( secondary, True )
+                , ( "w-full truncate flex flex-2", True )
+                ]
+            ]
+            [ text log.habit ]
+        , div [ class <| secondary ++ " flex flex-1" ] [ text <| toUtcString log.date ]
+        ]
 
 
 toUtcString : Posix -> String
 toUtcString time =
-    String.fromInt (toYear utc time)
-        ++ ":"
-        ++ toDanishMonth (toMonth utc time)
-        ++ ":"
+    toDanishMonth (toMonth utc time)
+        ++ "/"
         ++ String.fromInt (toDay utc time)
-        ++ ":"
+        ++ "/"
+        ++ String.fromInt (toYear utc time)
+        ++ " - "
         ++ String.fromInt (toHour utc time)
         ++ ":"
         ++ String.fromInt (toMinute utc time)
-        ++ " (UTC)"
 
 
 toDanishMonth : Month -> String
 toDanishMonth month =
     case month of
         Jan ->
-            "jan"
+            "01"
 
         Feb ->
-            "feb"
+            "02"
 
         Mar ->
-            "mar"
+            "03"
 
         Apr ->
-            "apr"
+            "04"
 
         May ->
-            "maj"
+            "05"
 
         Jun ->
-            "jun"
+            "06"
 
         Jul ->
-            "jul"
+            "07"
 
         Aug ->
-            "aug"
+            "08"
 
         Sep ->
-            "sep"
+            "09"
 
         Oct ->
-            "okt"
+            "10"
 
         Nov ->
-            "nov"
+            "11"
 
         Dec ->
-            "dec"
+            "12"
 
 
 
@@ -286,7 +294,7 @@ header =
 
 secondary : String
 secondary =
-    "font-body text-gray-700 text-sm"
+    "font-body text-gray-700 text-xs"
 
 
 primaryButton : String
