@@ -32,9 +32,9 @@ type alias HabitHistory =
 
 type alias Model =
     { habit : Habit
-    , completedToday : Bool
     , habitHistory : HabitHistory
     , editing : Bool
+    , now : Posix
     }
 
 
@@ -51,11 +51,11 @@ init flags url key =
             decodeHabitHistory flags.habitHistory
     in
     ( { habit = flags.habit
-      , completedToday = False
       , habitHistory = habitHistory
       , editing = False
+      , now = Time.millisToPosix 0
       }
-    , Cmd.none
+    , Task.perform Now Time.now
     )
 
 
@@ -69,6 +69,7 @@ type Msg
     | LogHabit Posix
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
+    | Now Posix
     | NoOp
 
 
@@ -76,7 +77,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         CompleteHabit ->
-            ( { model | completedToday = True }, Task.perform LogHabit Time.now )
+            ( model, Task.perform LogHabit Time.now )
 
         LogHabit now ->
             let
@@ -86,12 +87,12 @@ update msg model =
                 nextHistory =
                     habitLog :: model.habitHistory
             in
-            ( { model | completedToday = True, habitHistory = nextHistory }
+            ( { model | habitHistory = nextHistory }
             , saveHabitHistory nextHistory
             )
 
         UpdateHabit habit ->
-            ( { model | habit = habit, completedToday = False }
+            ( { model | habit = habit }
             , saveHabit habit
             )
 
@@ -100,6 +101,9 @@ update msg model =
 
         ClickedLink _ ->
             ( model, Cmd.none )
+
+        Now now ->
+            ( { model | now = now }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -156,6 +160,22 @@ decodePosix v =
     Decode.succeed <| Time.millisToPosix v
 
 
+completedToday : Model -> Bool
+completedToday { habit, habitHistory, now } =
+    let
+        logCompletedToday log =
+            log.habit == habit && isSameDay log.date now
+    in
+    List.any logCompletedToday habitHistory
+
+
+isSameDay : Posix -> Posix -> Bool
+isSameDay now time =
+    (Time.toYear utc now == Time.toYear utc time)
+        && (Time.toMonth utc now == Time.toMonth utc time)
+        && (Time.toDay utc now == Time.toDay utc time)
+
+
 
 ---- VIEW ----
 
@@ -171,16 +191,16 @@ pageContent : Model -> Html Msg
 pageContent model =
     let
         completedText =
-            if model.completedToday then
-                "1 of 21 days"
+            if completedToday model then
+                "Done"
 
             else
-                "0 of 21 days"
+                " "
     in
     div [ class "flex flex-col items-center h-screen" ]
         [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
             [ habitInput model
-            , div [ class secondary ] [ text completedText ]
+            , div [ class <| secondary ++ " h-2" ] [ text completedText ]
             , div [ class "pt-4" ] (List.take 10 <| List.map habitLogToHtml model.habitHistory)
             ]
         , div [ class "flex flex-1 items-center justify-center w-full" ]
