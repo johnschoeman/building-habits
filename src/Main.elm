@@ -5,6 +5,7 @@ import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, input, text)
 import Html.Attributes exposing (autofocus, class, classList, placeholder, src, value)
 import Html.Events exposing (onClick, onInput)
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Task
 import Time exposing (Month(..), Posix, toDay, toHour, toMinute, toMonth, toYear, utc)
@@ -25,23 +26,33 @@ type alias HabitLog =
     }
 
 
+type alias HabitHistory =
+    List HabitLog
+
+
 type alias Model =
     { habit : Habit
     , completedToday : Bool
-    , habitHistory : List HabitLog
+    , habitHistory : HabitHistory
     , editing : Bool
     }
 
 
 type alias Flags =
-    String
+    { habit : String
+    , habitHistory : Decode.Value
+    }
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    ( { habit = flags
+    let
+        habitHistory =
+            decodeHabitHistory flags.habitHistory
+    in
+    ( { habit = flags.habit
       , completedToday = False
-      , habitHistory = []
+      , habitHistory = habitHistory
       , editing = False
       }
     , Cmd.none
@@ -76,7 +87,7 @@ update msg model =
                     habitLog :: model.habitHistory
             in
             ( { model | completedToday = True, habitHistory = nextHistory }
-            , Cmd.none
+            , saveHabitHistory nextHistory
             )
 
         UpdateHabit habit ->
@@ -94,12 +105,55 @@ update msg model =
             ( model, Cmd.none )
 
 
-port saveUserDataLocally : Encode.Value -> Cmd msg
+port saveHabitLocally : Encode.Value -> Cmd msg
 
 
 saveHabit : Habit -> Cmd Msg
 saveHabit habit =
-    saveUserDataLocally <| Encode.string habit
+    saveHabitLocally <| Encode.string habit
+
+
+port saveHabitHistoryLocally : Encode.Value -> Cmd msg
+
+
+saveHabitHistory : HabitHistory -> Cmd Msg
+saveHabitHistory habitHistory =
+    saveHabitHistoryLocally <| encodeHabitHistory habitHistory
+
+
+encodeHabitHistory : HabitHistory -> Encode.Value
+encodeHabitHistory habitHistory =
+    Encode.list encodeHabitLog habitHistory
+
+
+encodeHabitLog : HabitLog -> Encode.Value
+encodeHabitLog log =
+    Encode.object
+        [ ( "habit", Encode.string log.habit )
+        , ( "date", Encode.int (Time.posixToMillis log.date) )
+        ]
+
+
+decodeHabitHistory : Decode.Value -> HabitHistory
+decodeHabitHistory value =
+    case Decode.decodeValue (Decode.list decodeHabitLog) value of
+        Ok history ->
+            history
+
+        Err _ ->
+            []
+
+
+decodeHabitLog : Decode.Decoder HabitLog
+decodeHabitLog =
+    Decode.map2 HabitLog
+        (Decode.field "habit" Decode.string)
+        (Decode.field "date" Decode.int |> Decode.andThen decodePosix)
+
+
+decodePosix : Int -> Decode.Decoder Posix
+decodePosix v =
+    Decode.succeed <| Time.millisToPosix v
 
 
 
@@ -127,7 +181,7 @@ pageContent model =
         [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
             [ habitInput model
             , div [ class secondary ] [ text completedText ]
-            , div [] (List.map habitLogToHtml model.habitHistory)
+            , div [] (List.take 10 <| List.map habitLogToHtml model.habitHistory)
             ]
         , div [ class "flex flex-1 items-center justify-center w-full" ]
             [ button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
