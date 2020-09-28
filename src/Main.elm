@@ -2,7 +2,7 @@ port module Main exposing (..)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (Html, button, div, h1, input, text)
+import Html exposing (Html, button, div, h1, text, textarea)
 import Html.Attributes exposing (autofocus, class, classList, placeholder, src, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
@@ -66,6 +66,7 @@ init flags url key =
 type Msg
     = CompleteHabit
     | UpdateHabit Habit
+    | ToggleEditHabit
     | LogHabit Posix
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
@@ -95,6 +96,9 @@ update msg model =
             ( { model | habit = habit }
             , saveHabit habit
             )
+
+        ToggleEditHabit ->
+            ( { model | editing = not model.editing }, Cmd.none )
 
         ChangedUrl _ ->
             ( model, Cmd.none )
@@ -208,27 +212,48 @@ pageContent model =
 
         daysCompletedText =
             String.fromInt daysCompleted ++ " of 21 days"
+
+        habitCompleteButton =
+            if completedToday model then
+                text "✓"
+
+            else
+                button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
+
+        editButtonText =
+            if model.editing then
+                "Done"
+
+            else
+                "Edit"
     in
     div [ class "flex flex-col items-center h-screen" ]
         [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
-            [ habitInput model
+            [ div [ class "flex flex-row justify-between items-end" ]
+                [ habitInput model
+                , button [ onClick ToggleEditHabit ] [ text editButtonText ]
+                ]
             , div [ class <| secondary ++ " h-2" ] [ text daysCompletedText ]
             ]
         , div [ class "flex flex-1 items-center justify-center w-full" ]
-            [ button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
+            [ habitCompleteButton
             ]
         ]
 
 
 habitInput : Model -> Html Msg
 habitInput model =
-    input
-        [ autofocus True
-        , value model.habit
-        , onInput UpdateHabit
-        , classList [ ( header, True ), ( "py-1", True ) ]
-        ]
-        []
+    if model.editing then
+        textarea
+            [ autofocus True
+            , value model.habit
+            , onInput UpdateHabit
+            , classList [ ( header, True ), ( "py-1", True ) ]
+            ]
+            []
+
+    else
+        h1 [ class header ] [ text model.habit ]
 
 
 
