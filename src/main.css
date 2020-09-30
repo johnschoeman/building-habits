@@ -14,3 +14,10 @@
   height: inherit;
 }
 
+*:focus {
+  outline: none;
+}
+
+textarea, input {
+  -webkit-appearance: none;
+}

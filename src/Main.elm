@@ -3,8 +3,9 @@ port module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, text, textarea)
-import Html.Attributes exposing (autofocus, class, classList, placeholder, src, value)
+import Html.Attributes exposing (autofocus, class, classList, cols, placeholder, readonly, rows, src, value)
 import Html.Events exposing (onClick, onInput)
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Task
@@ -52,7 +53,7 @@ init flags url key =
     in
     ( { habit = flags.habit
       , habitLog = habitLog
-      , editing = False
+      , editing = True
       , now = Time.millisToPosix 0
       }
     , Task.perform Now Time.now
@@ -199,7 +200,7 @@ timesHabitWasCompleted habit habitLog =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Building Habigs"
+    { title = "Building Habits"
     , body = [ pageContent model ]
     }
 
@@ -211,49 +212,63 @@ pageContent model =
             timesHabitWasCompleted model.habit model.habitLog
 
         daysCompletedText =
-            String.fromInt daysCompleted ++ " of 21 days"
+            String.fromInt daysCompleted ++ " / 21"
 
         habitCompleteButton =
             if completedToday model then
-                text "✓"
+                div [ class <| primaryButton ++ " text-gray-800" ] [ Icons.thumbsUp purple 36 ]
 
             else
-                button [ class primaryButton, onClick CompleteHabit ] [ text "✓" ]
-
-        editButtonText =
-            if model.editing then
-                "Done"
-
-            else
-                "Edit"
+                button
+                    [ class <| primaryButton ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
+                    [ Icons.check white 36 ]
     in
-    div [ class "flex flex-col items-center h-screen" ]
-        [ div [ class "flex flex-4 flex-col justify-center align-left w-full p-4" ]
-            [ div [ class "flex flex-row justify-between items-end" ]
-                [ habitInput model
-                , button [ onClick ToggleEditHabit ] [ text editButtonText ]
+    div []
+        [ div [ class "flex flex-col items-center h-screen px-4 py-12" ]
+            [ div [ class "flex flex-3 flex-col justify-end items-start align-left w-full" ]
+                [ habitContainer model
+                , div [ class <| daysText ] [ text daysCompletedText ]
                 ]
-            , div [ class <| secondary ++ " h-2" ] [ text daysCompletedText ]
+            , div [ class "flex flex-2 items-end justify-center w-full" ]
+                [ habitCompleteButton
+                ]
             ]
-        , div [ class "flex flex-1 items-center justify-center w-full" ]
-            [ habitCompleteButton
-            ]
+        , editHabitModal model
         ]
 
 
-habitInput : Model -> Html Msg
-habitInput model =
-    if model.editing then
-        textarea
-            [ autofocus True
-            , value model.habit
-            , onInput UpdateHabit
-            , classList [ ( header, True ), ( "py-1", True ) ]
-            ]
-            []
+habitContainer : Model -> Html Msg
+habitContainer model =
+    div [ class "flex flex-row justify-between items-end w-full mb-10" ]
+        [ h1 [ class <| header ++ " w-4/5 overflow-y-scroll max-h-64" ] [ text model.habit ]
+        , div [] [ editButton ]
+        ]
 
-    else
-        h1 [ class header ] [ text model.habit ]
+
+editHabitModal : Model -> Html Msg
+editHabitModal model =
+    div
+        [ classList
+            [ ( "flex flex-col absolute left-0 top-0 bottom-0 right-0 bg-white", True )
+            , ( "hidden", not model.editing )
+            ]
+        ]
+        [ div [ class "flex flex-grow p-8" ]
+            [ textarea
+                [ autofocus True
+                , value model.habit
+                , onInput UpdateHabit
+                , classList [ ( header, True ), ( "flex-grow w-full resize-none", True ) ]
+                ]
+                []
+            ]
+        , button [ class "w-full bg-purple-700 py-4 text-white font-semibold", onClick ToggleEditHabit ] [ text "Save" ]
+        ]
+
+
+editButton : Html Msg
+editButton =
+    button [ onClick ToggleEditHabit ] [ Icons.edit gray 24 ]
 
 
 
@@ -276,16 +291,31 @@ main =
 ---- STYLES ----
 
 
+gray : String
+gray =
+    "#aeaeae"
+
+
+white : String
+white =
+    "#ffffff"
+
+
+purple : String
+purple =
+    "#6b46c1"
+
+
 header : String
 header =
-    "font-display font-bold leading-tight text-4xl text-gray-900"
+    "font-display font-bold leading-tight text-3xl text-gray-900"
 
 
-secondary : String
-secondary =
-    "font-body text-gray-700 text-xs"
+daysText : String
+daysText =
+    "font-body font-semibold text-lg text-gray-700"
 
 
 primaryButton : String
 primaryButton =
-    "bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-full"
+    "text-white font-bold p-4 rounded-full"

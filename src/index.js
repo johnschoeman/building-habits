@@ -44,3 +44,4 @@ app.ports.saveHabitLocally.subscribe((habit) => {
 app.ports.saveHabitLogLocally.subscribe((habitLog) => {
   saveHabitLogLocally(habitLog);
 });
+

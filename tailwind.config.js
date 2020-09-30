@@ -11,6 +11,10 @@ module.exports = {
       "4": "4 4 0%",
       "5": "5 5 0%",
     },
+    maxHeight: {
+      "64": "16rem",
+      full: "100%",
+    },
     variants: {},
     plugins: [],
   },
