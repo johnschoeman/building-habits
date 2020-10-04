@@ -53,7 +53,7 @@ init flags url key =
     in
     ( { habit = flags.habit
       , habitLog = habitLog
-      , editing = True
+      , editing = False
       , now = Time.millisToPosix 0
       }
     , Task.perform Now Time.now
