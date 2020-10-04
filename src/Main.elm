@@ -231,53 +231,65 @@ view model =
 
 pageContent : Model -> Html Msg
 pageContent model =
+    div []
+        [ habitScreen model
+        , editHabitModal model
+        ]
+
+
+habitScreen : Model -> Html Msg
+habitScreen model =
     let
         daysCompleted =
             timesHabitWasCompleted model.habit model.habitLog
 
         daysCompletedText =
             String.fromInt daysCompleted ++ " / 21"
-
-        habitCompleteButton =
-            if completedToday model then
-                div []
-                    [ div
-                        [ class <| primaryButton ++ " text-gray-800"
-                        , onClick RemoveLastHabitEntry
-                        ]
-                        [ Icons.undo purple 36 ]
-                    ]
-
-            else
-                button
-                    [ class <| primaryButton ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
-                    [ Icons.check white 36 ]
     in
-    div []
-        [ div [ class "grid h-screen px-4 py-12" ]
-            [ div [ class "flex flex-col justify-end" ]
-                [ h1
-                    [ classList
-                        [ ( header ++ " overflow-y-scroll max-h-64 mb-10 break-anywhere", True )
-                        , ( "line-through", completedToday model )
-                        ]
-                    , onClick StartEditHabit
-                    ]
-                    [ text model.habit ]
-                , div [ class daysText ] [ text daysCompletedText ]
-                ]
-            , div [ class "flex items-end justify-center" ] [ habitCompleteButton ]
+    div [ class "grid h-screen px-4 py-12" ]
+        [ div [ class "flex flex-col justify-end" ]
+            [ habitTextView model
+            , div [ class daysText ] [ text daysCompletedText ]
             ]
-        , editHabitModal model
+        , div [ class "flex items-end justify-center" ] [ habitCompleteButton model ]
         , completedTodayText model
         ]
+
+
+habitTextView : Model -> Html Msg
+habitTextView model =
+    h1
+        [ classList
+            [ ( header ++ " overflow-y-scroll max-h-64 mb-10 break-anywhere", True )
+            , ( "line-through", completedToday model )
+            ]
+        , onClick ToggleEditHabit
+        ]
+        [ text model.habit ]
+
+
+habitCompleteButton : Model -> Html Msg
+habitCompleteButton model =
+    if completedToday model then
+        div []
+            [ button
+                [ class <| primaryButton ++ " text-gray-800"
+                , onClick RemoveLastHabitEntry
+                ]
+                [ Icons.undo purple 36 ]
+            ]
+
+    else
+        button
+            [ class <| primaryButton ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
+            [ Icons.check white 36 ]
 
 
 completedTodayText : Model -> Html Msg
 completedTodayText model =
     if completedToday model then
         div
-            [ class "absolute top-0 mt-8 w-full text-gray-600 text-center"
+            [ class "absolute top-0 mt-8 text-gray-600 text-center"
             ]
             [ text "Come back tomorrow!" ]
 
