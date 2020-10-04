@@ -224,51 +224,52 @@ pageContent model =
                     [ Icons.check white 36 ]
     in
     div []
-        [ div [ class "flex flex-col items-center h-screen px-4 py-12" ]
-            [ div [ class "flex flex-3 flex-col justify-end items-start align-left w-full" ]
-                [ habitContainer model
-                , div [ class <| daysText ] [ text daysCompletedText ]
+        [ div [ class "grid h-screen px-4 py-12" ]
+            [ div [ class "flex flex-col justify-end" ]
+                [ h1
+                    [ class <| header ++ " overflow-y-scroll max-h-64 mb-10", onClick ToggleEditHabit ]
+                    [ text model.habit ]
+                , div [ class daysText ] [ text daysCompletedText ]
                 ]
-            , div [ class "flex flex-2 items-end justify-center w-full" ]
-                [ habitCompleteButton
-                ]
+            , div [ class "flex items-end justify-center" ] [ habitCompleteButton ]
             ]
         , editHabitModal model
+        , completedTodayText model
         ]
 
 
-habitContainer : Model -> Html Msg
-habitContainer model =
-    div [ class "flex flex-row justify-between items-end w-full mb-10" ]
-        [ h1 [ class <| header ++ " w-4/5 overflow-y-scroll max-h-64" ] [ text model.habit ]
-        , div [] [ editButton ]
-        ]
+completedTodayText : Model -> Html Msg
+completedTodayText model =
+    if completedToday model then
+        div
+            [ class "absolute top-0 mt-8 w-screen text-gray-600 text-center"
+            ]
+            [ text "Come back tomorrow!" ]
+
+    else
+        text ""
 
 
 editHabitModal : Model -> Html Msg
 editHabitModal model =
     div
         [ classList
-            [ ( "flex flex-col absolute left-0 top-0 bottom-0 right-0 bg-white", True )
+            [ ( "grid grid-cols-3-1 absolute z-20 left-0 top-0 bottom-0 right-0 bg-white", True )
             , ( "hidden", not model.editing )
             ]
         ]
-        [ div [ class "flex flex-grow p-8" ]
-            [ textarea
-                [ autofocus True
-                , value model.habit
-                , onInput UpdateHabit
-                , classList [ ( header, True ), ( "flex-grow w-full resize-none", True ) ]
-                ]
-                []
+        [ textarea
+            [ value model.habit
+            , onInput UpdateHabit
+            , classList [ ( header, True ), ( "py-8 px-4 resize-none", True ) ]
             ]
-        , button [ class "w-full bg-purple-700 py-4 text-white font-semibold", onClick ToggleEditHabit ] [ text "Save" ]
+            []
+        , button
+            [ class "p-4 bg-purple-700 text-white font-semibold"
+            , onClick ToggleEditHabit
+            ]
+            [ text "Save" ]
         ]
-
-
-editButton : Html Msg
-editButton =
-    button [ onClick ToggleEditHabit ] [ Icons.edit gray 24 ]
 
 
 
@@ -313,7 +314,7 @@ header =
 
 daysText : String
 daysText =
-    "font-body font-semibold text-lg text-gray-700"
+    "font-body font-semibold text-lg"
 
 
 primaryButton : String

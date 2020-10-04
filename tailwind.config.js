@@ -15,6 +15,10 @@ module.exports = {
       "64": "16rem",
       full: "100%",
     },
+    gridTemplateColumns: {
+      "2-1": "2fr 1fr",
+      "3-1": "3fr 1fr",
+    },
     variants: {},
     plugins: [],
   },
