@@ -3,13 +3,13 @@ port module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, text, textarea)
-import Html.Attributes exposing (autofocus, class, classList, cols, placeholder, readonly, rows, src, value)
+import Html.Attributes exposing (class, classList, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Task
-import Time exposing (Month(..), Posix, toDay, toHour, toMinute, toMonth, toYear, utc)
+import Time exposing (Month(..), Posix, toDay, toMonth, toYear, utc)
 import Url
 
 
@@ -66,6 +66,7 @@ init flags url key =
 
 type Msg
     = CompleteHabit
+    | RemoveLastHabitEntry
     | UpdateHabit Habit
     | ToggleEditHabit
     | LogHabit Posix
@@ -88,6 +89,20 @@ update msg model =
 
                 nextLog =
                     habitEntry :: model.habitLog
+            in
+            ( { model | habitLog = nextLog }
+            , saveHabitLog nextLog
+            )
+
+        RemoveLastHabitEntry ->
+            let
+                nextLog =
+                    case List.tail model.habitLog of
+                        Just v ->
+                            v
+
+                        Nothing ->
+                            []
             in
             ( { model | habitLog = nextLog }
             , saveHabitLog nextLog
@@ -216,7 +231,13 @@ pageContent model =
 
         habitCompleteButton =
             if completedToday model then
-                div [ class <| primaryButton ++ " text-gray-800" ] [ Icons.thumbsUp purple 36 ]
+                div []
+                    [ div
+                        [ class <| primaryButton ++ " text-gray-800"
+                        , onClick RemoveLastHabitEntry
+                        ]
+                        [ Icons.undo purple 36 ]
+                    ]
 
             else
                 button
@@ -227,7 +248,12 @@ pageContent model =
         [ div [ class "grid h-screen px-4 py-12" ]
             [ div [ class "flex flex-col justify-end" ]
                 [ h1
-                    [ class <| header ++ " overflow-y-scroll max-h-64 mb-10", onClick ToggleEditHabit ]
+                    [ classList
+                        [ ( header ++ " overflow-y-scroll max-h-64 mb-10 break-anywhere", True )
+                        , ( "line-through", completedToday model )
+                        ]
+                    , onClick ToggleEditHabit
+                    ]
                     [ text model.habit ]
                 , div [ class daysText ] [ text daysCompletedText ]
                 ]
@@ -242,7 +268,7 @@ completedTodayText : Model -> Html Msg
 completedTodayText model =
     if completedToday model then
         div
-            [ class "absolute top-0 mt-8 w-screen text-gray-600 text-center"
+            [ class "absolute top-0 mt-8 w-full text-gray-600 text-center"
             ]
             [ text "Come back tomorrow!" ]
 
@@ -254,21 +280,21 @@ editHabitModal : Model -> Html Msg
 editHabitModal model =
     div
         [ classList
-            [ ( "grid grid-cols-3-1 absolute z-20 left-0 top-0 bottom-0 right-0 bg-white", True )
+            [ ( "absolute z-20 left-0 top-0 bottom-0 right-0 bg-white", True )
             , ( "hidden", not model.editing )
             ]
         ]
         [ textarea
             [ value model.habit
             , onInput UpdateHabit
-            , classList [ ( header, True ), ( "py-8 px-4 resize-none", True ) ]
+            , classList [ ( header, True ), ( "py-8 px-4 resize-none h-screen", True ) ]
             ]
             []
         , button
-            [ class "p-4 bg-purple-700 text-white font-semibold"
+            [ class "absolute right-0 bottom-0 mr-8 mb-8 p-4 rounded-full bg-purple-700"
             , onClick ToggleEditHabit
             ]
-            [ text "Save" ]
+            [ div [ class "mx-auto w-min-c" ] [ Icons.save white 36 ] ]
         ]
 
 
@@ -314,7 +340,7 @@ header =
 
 daysText : String
 daysText =
-    "font-body font-semibold text-lg"
+    "font-mono bold text-lg"
 
 
 primaryButton : String

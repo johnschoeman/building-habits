@@ -21,3 +21,11 @@
 textarea, input {
   -webkit-appearance: none;
 }
+
+.break-anywhere {
+  overflow-wrap: anywhere;
+}
+
+.w-min-c {
+  width: min-content;
+}
