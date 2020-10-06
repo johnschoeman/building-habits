@@ -88,7 +88,7 @@ type Msg
     | ClickedLink Browser.UrlRequest
     | Now Posix
     | CheckViewport Posix
-    | GotViewport Viewport
+    | GotViewport Browser.Dom.Viewport
     | NoOp
 
 
@@ -314,7 +314,7 @@ habitTextView model =
             [ ( header ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
             , ( "line-through", completedToday model )
             ]
-        , onClick ToggleEditHabit
+        , onClick StartEditHabit
         ]
         [ text model.habit ]
 
