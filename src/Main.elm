@@ -40,6 +40,7 @@ type alias ViewportSize =
 type alias Model =
     { habit : Habit
     , habitLog : HabitLog
+    , totalDays : Int
     , editing : Bool
     , now : Posix
     , viewportSize : ViewportSize
@@ -60,6 +61,7 @@ init flags url key =
     in
     ( { habit = flags.habit
       , habitLog = habitLog
+      , totalDays = 21
       , editing = False
       , now = Time.millisToPosix 0
       , viewportSize = ViewportSize 0
@@ -272,7 +274,9 @@ habitScreen : Model -> Html Msg
 habitScreen model =
     let
         daysCompletedText =
-            String.fromInt (daysCompleted model) ++ " / 21"
+            String.fromInt (daysCompleted model)
+                ++ " / "
+                ++ String.fromInt model.totalDays
     in
     div [ class "fixed grid h-screen w-screen px-4 py-12 z-10" ]
         [ div [ class "flex flex-col justify-end" ]
@@ -287,14 +291,11 @@ habitScreen model =
 progressBar : Model -> Html Msg
 progressBar model =
     let
-        totalDays =
-            21
-
         completedDays =
             toFloat <| daysCompleted model
 
         progressBarHeight =
-            (completedDays / totalDays) * model.viewportSize.height
+            (completedDays / toFloat model.totalDays) * model.viewportSize.height
 
         progressBarHeightString =
             (String.fromInt <| round progressBarHeight) ++ "px"
@@ -310,7 +311,7 @@ habitTextView : Model -> Html Msg
 habitTextView model =
     h1
         [ classList
-            [ ( header ++ " overflow-y-scroll max-h-64 mb-10 break-anywhere", True )
+            [ ( header ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
             , ( "line-through", completedToday model )
             ]
         , onClick ToggleEditHabit
