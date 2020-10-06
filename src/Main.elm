@@ -68,7 +68,7 @@ init flags url key =
       }
     , Cmd.batch
         [ Task.perform Now Time.now
-        , Task.perform CheckViewport Time.now
+        , Task.perform GetViewport Browser.Dom.getViewport
         ]
     )
 
@@ -87,8 +87,7 @@ type Msg
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
     | Now Posix
-    | CheckViewport Posix
-    | GotViewport Browser.Dom.Viewport
+    | GetViewport Browser.Dom.Viewport
     | NoOp
 
 
@@ -148,10 +147,7 @@ update msg model =
         Now now ->
             ( { model | now = now }, Cmd.none )
 
-        CheckViewport _ ->
-            ( model, Task.perform GotViewport Browser.Dom.getViewport )
-
-        GotViewport viewport ->
+        GetViewport viewport ->
             let
                 viewportSize =
                     model.viewportSize
