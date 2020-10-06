@@ -1,9 +1,10 @@
 port module Main exposing (..)
 
 import Browser
+import Browser.Dom
 import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, text, textarea)
-import Html.Attributes exposing (class, classList, value)
+import Html.Attributes exposing (class, classList, id, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Decode as Decode
@@ -68,7 +69,8 @@ type Msg
     = CompleteHabit
     | RemoveLastHabitEntry
     | UpdateHabit Habit
-    | ToggleEditHabit
+    | StartEditHabit
+    | EndEditHabit
     | LogHabit Posix
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
@@ -113,8 +115,15 @@ update msg model =
             , saveHabit habit
             )
 
-        ToggleEditHabit ->
-            ( { model | editing = not model.editing }, Cmd.none )
+        StartEditHabit ->
+            let
+                focus =
+                    Task.attempt (\_ -> NoOp) (Browser.Dom.focus "edit-habit-input")
+            in
+            ( { model | editing = True }, focus )
+
+        EndEditHabit ->
+            ( { model | editing = False }, Cmd.none )
 
         ChangedUrl _ ->
             ( model, Cmd.none )
@@ -252,7 +261,7 @@ pageContent model =
                         [ ( header ++ " overflow-y-scroll max-h-64 mb-10 break-anywhere", True )
                         , ( "line-through", completedToday model )
                         ]
-                    , onClick ToggleEditHabit
+                    , onClick StartEditHabit
                     ]
                     [ text model.habit ]
                 , div [ class daysText ] [ text daysCompletedText ]
@@ -288,11 +297,12 @@ editHabitModal model =
             [ value model.habit
             , onInput UpdateHabit
             , classList [ ( header, True ), ( "py-8 px-4 resize-none h-screen", True ) ]
+            , id "edit-habit-input"
             ]
             []
         , button
             [ class "absolute right-0 bottom-0 mr-8 mb-8 p-4 rounded-full bg-purple-700"
-            , onClick ToggleEditHabit
+            , onClick EndEditHabit
             ]
             [ div [ class "mx-auto w-min-c" ] [ Icons.save white 36 ] ]
         ]
