@@ -4,7 +4,7 @@ import Browser
 import Browser.Dom
 import Browser.Navigation as Nav
 import Html exposing (Html, button, div, h1, text, textarea)
-import Html.Attributes exposing (class, classList, id, value)
+import Html.Attributes exposing (class, classList, id, style, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Decode as Decode
@@ -32,11 +32,18 @@ type alias HabitLog =
     List HabitEntry
 
 
+type alias ViewportSize =
+    { height : Float
+    }
+
+
 type alias Model =
     { habit : Habit
     , habitLog : HabitLog
+    , totalDays : Int
     , editing : Bool
     , now : Posix
+    , viewportSize : ViewportSize
     }
 
 
@@ -54,10 +61,15 @@ init flags url key =
     in
     ( { habit = flags.habit
       , habitLog = habitLog
+      , totalDays = 21
       , editing = False
       , now = Time.millisToPosix 0
+      , viewportSize = ViewportSize 0
       }
-    , Task.perform Now Time.now
+    , Cmd.batch
+        [ Task.perform Now Time.now
+        , Task.perform CheckViewport Time.now
+        ]
     )
 
 
@@ -75,6 +87,8 @@ type Msg
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
     | Now Posix
+    | CheckViewport Posix
+    | GotViewport Browser.Dom.Viewport
     | NoOp
 
 
@@ -133,6 +147,19 @@ update msg model =
 
         Now now ->
             ( { model | now = now }, Cmd.none )
+
+        CheckViewport _ ->
+            ( model, Task.perform GotViewport Browser.Dom.getViewport )
+
+        GotViewport viewport ->
+            let
+                viewportSize =
+                    model.viewportSize
+
+                nextViewportSize =
+                    { viewportSize | height = viewport.viewport.height }
+            in
+            ( { model | viewportSize = nextViewportSize }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -231,53 +258,89 @@ view model =
 
 pageContent : Model -> Html Msg
 pageContent model =
-    let
-        daysCompleted =
-            timesHabitWasCompleted model.habit model.habitLog
-
-        daysCompletedText =
-            String.fromInt daysCompleted ++ " / 21"
-
-        habitCompleteButton =
-            if completedToday model then
-                div []
-                    [ div
-                        [ class <| primaryButton ++ " text-gray-800"
-                        , onClick RemoveLastHabitEntry
-                        ]
-                        [ Icons.undo purple 36 ]
-                    ]
-
-            else
-                button
-                    [ class <| primaryButton ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
-                    [ Icons.check white 36 ]
-    in
     div []
-        [ div [ class "grid h-screen px-4 py-12" ]
-            [ div [ class "flex flex-col justify-end" ]
-                [ h1
-                    [ classList
-                        [ ( header ++ " overflow-y-scroll max-h-64 mb-10 break-anywhere", True )
-                        , ( "line-through", completedToday model )
-                        ]
-                    , onClick StartEditHabit
-                    ]
-                    [ text model.habit ]
-                , div [ class daysText ] [ text daysCompletedText ]
-                ]
-            , div [ class "flex items-end justify-center" ] [ habitCompleteButton ]
-            ]
+        [ habitScreen model
+        , progressBar model
         , editHabitModal model
+        ]
+
+
+daysCompleted : Model -> Int
+daysCompleted model =
+    timesHabitWasCompleted model.habit model.habitLog
+
+
+habitScreen : Model -> Html Msg
+habitScreen model =
+    let
+        daysCompletedText =
+            String.fromInt (daysCompleted model)
+                ++ " / "
+                ++ String.fromInt model.totalDays
+    in
+    div [ class "fixed grid h-screen w-screen px-4 py-12 z-10" ]
+        [ div [ class "flex flex-col justify-end" ]
+            [ habitTextView model
+            , div [ class daysText ] [ text daysCompletedText ]
+            ]
+        , div [ class "flex items-end justify-center" ] [ habitCompleteButton model ]
         , completedTodayText model
         ]
+
+
+progressBar : Model -> Html Msg
+progressBar model =
+    let
+        completedDays =
+            toFloat <| daysCompleted model
+
+        progressBarHeight =
+            (completedDays / toFloat model.totalDays) * model.viewportSize.height
+
+        progressBarHeightString =
+            (String.fromInt <| round progressBarHeight) ++ "px"
+    in
+    div
+        [ class "fixed bottom-0 left-0 w-full z-0 bg-purple-100"
+        , style "height" progressBarHeightString
+        ]
+        []
+
+
+habitTextView : Model -> Html Msg
+habitTextView model =
+    h1
+        [ classList
+            [ ( header ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
+            , ( "line-through", completedToday model )
+            ]
+        , onClick StartEditHabit
+        ]
+        [ text model.habit ]
+
+
+habitCompleteButton : Model -> Html Msg
+habitCompleteButton model =
+    if completedToday model then
+        div []
+            [ button
+                [ class <| primaryButton ++ " text-gray-800"
+                , onClick RemoveLastHabitEntry
+                ]
+                [ Icons.undo purple 36 ]
+            ]
+
+    else
+        button
+            [ class <| primaryButton ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
+            [ Icons.check white 36 ]
 
 
 completedTodayText : Model -> Html Msg
 completedTodayText model =
     if completedToday model then
         div
-            [ class "absolute top-0 mt-8 w-full text-gray-600 text-center"
+            [ class "absolute w-screen top-0 mt-8 text-gray-600 text-center"
             ]
             [ text "Come back tomorrow!" ]
 
