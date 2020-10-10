@@ -21,6 +21,9 @@ import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Styles.Buttons as Buttons
+import Styles.Colors as Colors
+import Styles.Typography as Typography
 import Task
 import Time exposing (Month(..), Posix)
 import Url
@@ -243,7 +246,7 @@ habitCountIndicator model =
                 ++ " / "
                 ++ String.fromInt totalDays
     in
-    div [ class daysText, onClick ToggleShowLog ] [ text daysCompletedText ]
+    div [ class Typography.body1, onClick ToggleShowLog ] [ text daysCompletedText ]
 
 
 progressBar : Model -> Html Msg
@@ -269,7 +272,7 @@ habitTextView : Model -> Html Msg
 habitTextView { habit, now, habitLog, timeZone } =
     h1
         [ classList
-            [ ( header ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
+            [ ( Typography.header1 ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
             , ( "line-through", completedToday timeZone habit now habitLog )
             ]
         , onClick StartEditHabit
@@ -282,16 +285,16 @@ habitCompleteButton { habit, now, habitLog, timeZone } =
     if completedToday timeZone habit now habitLog then
         div []
             [ button
-                [ class <| primaryButton ++ " text-gray-800"
+                [ class <| Buttons.primary ++ " text-gray-800"
                 , onClick RemoveLastHabitEntry
                 ]
-                [ Icons.undo purple 36 ]
+                [ Icons.undo Colors.purple 36 ]
             ]
 
     else
         button
-            [ class <| primaryButton ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
-            [ Icons.check white 36 ]
+            [ class <| Buttons.primary ++ " bg-purple-700 hover:bg-purple-800", onClick CompleteHabit ]
+            [ Icons.check Colors.white 36 ]
 
 
 completedTodayText : Model -> Html Msg
@@ -317,7 +320,7 @@ editHabitModal model =
         [ textarea
             [ value model.habit
             , onInput UpdateHabit
-            , classList [ ( header, True ), ( "py-8 px-4 resize-none h-screen", True ) ]
+            , classList [ ( Typography.header1, True ), ( "py-8 px-4 resize-none h-screen", True ) ]
             , id "edit-habit-input"
             ]
             []
@@ -325,7 +328,7 @@ editHabitModal model =
             [ class "absolute right-0 bottom-0 mr-8 mb-8 p-4 rounded-full bg-purple-700"
             , onClick EndEditHabit
             ]
-            [ div [ class "mx-auto w-min-c" ] [ Icons.save white 36 ] ]
+            [ div [ class "mx-auto w-min-c" ] [ Icons.save Colors.white 36 ] ]
         ]
 
 
@@ -344,8 +347,8 @@ logScreen model =
 logScreenHeader : Html Msg
 logScreenHeader =
     div [ class "flex flex-row justify-between items-center mb-4" ]
-        [ div [ class header ] [ text "Habit Log" ]
-        , div [ class closeButton, onClick ToggleShowLog ] [ text "X" ]
+        [ div [ class Typography.header1 ] [ text "Habit Log" ]
+        , div [ class Buttons.close, onClick ToggleShowLog ] [ text "X" ]
         ]
 
 
@@ -437,42 +440,3 @@ main =
         , onUrlChange = ChangedUrl
         , onUrlRequest = ClickedLink
         }
-
-
-
----- STYLES ----
-
-
-gray : String
-gray =
-    "#aeaeae"
-
-
-white : String
-white =
-    "#ffffff"
-
-
-purple : String
-purple =
-    "#6b46c1"
-
-
-header : String
-header =
-    "font-display font-bold leading-tight text-3xl text-gray-900"
-
-
-daysText : String
-daysText =
-    "font-mono bold text-lg"
-
-
-closeButton : String
-closeButton =
-    "font-bold p-4 rounded-full"
-
-
-primaryButton : String
-primaryButton =
-    "text-white font-bold p-4 rounded-full"
