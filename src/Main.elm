@@ -20,7 +20,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Task
-import Time exposing (Posix)
+import Time exposing (Month(..), Posix)
 import Url
 
 
@@ -36,8 +36,8 @@ type alias ViewportSize =
 type alias Model =
     { habit : Habit
     , habitLog : HabitLog
-    , totalDays : Int
     , editing : Bool
+    , showLog : Bool
     , now : Posix
     , timeZone : Time.Zone
     , viewportSize : ViewportSize
@@ -58,8 +58,8 @@ init flags url key =
     in
     ( { habit = flags.habit
       , habitLog = habitLog
-      , totalDays = 21
       , editing = False
+      , showLog = True
       , now = Time.millisToPosix 0
       , timeZone = Time.utc
       , viewportSize = ViewportSize 0
@@ -72,6 +72,10 @@ init flags url key =
     )
 
 
+totalDays =
+    21
+
+
 
 ---- UPDATE ----
 
@@ -82,6 +86,7 @@ type Msg
     | UpdateHabit Habit
     | StartEditHabit
     | EndEditHabit
+    | ToggleShowLog
     | LogHabit Posix
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
@@ -137,6 +142,9 @@ update msg model =
 
         EndEditHabit ->
             ( { model | editing = False }, Cmd.none )
+
+        ToggleShowLog ->
+            ( { model | showLog = not model.showLog }, Cmd.none )
 
         ChangedUrl _ ->
             ( model, Cmd.none )
@@ -198,43 +206,60 @@ view model =
 pageContent : Model -> Html Msg
 pageContent model =
     div []
-        [ habitScreen model
+        [ mainScreen model
         , progressBar model
         , editHabitModal model
         ]
 
 
-daysCompleted : Model -> Int
-daysCompleted model =
-    timesHabitWasCompleted model.habit model.habitLog
+mainScreen : Model -> Html Msg
+mainScreen model =
+    if model.showLog then
+        logScreen model
+
+    else
+        habitScreen model
+
+
+
+---- Habit Screen ----
 
 
 habitScreen : Model -> Html Msg
 habitScreen model =
-    let
-        daysCompletedText =
-            String.fromInt (daysCompleted model)
-                ++ " / "
-                ++ String.fromInt model.totalDays
-    in
     div [ class "fixed grid h-screen w-screen px-4 py-12 z-10" ]
         [ div [ class "flex flex-col justify-end" ]
             [ habitTextView model
-            , div [ class daysText ] [ text daysCompletedText ]
+            , habitCountIndicator model
             ]
         , div [ class "flex items-end justify-center" ] [ habitCompleteButton model ]
         , completedTodayText model
         ]
 
 
+habitCountIndicator : Model -> Html Msg
+habitCountIndicator model =
+    let
+        { habit, habitLog } =
+            model
+
+        daysCompletedText =
+            String.fromInt
+                (timesHabitWasCompleted habit habitLog)
+                ++ " / "
+                ++ String.fromInt totalDays
+    in
+    div [ class daysText, onClick ToggleShowLog ] [ text daysCompletedText ]
+
+
 progressBar : Model -> Html Msg
-progressBar model =
+progressBar { habit, habitLog, viewportSize } =
     let
         completedDays =
-            toFloat <| daysCompleted model
+            toFloat <| timesHabitWasCompleted habit habitLog
 
         progressBarHeight =
-            (completedDays / toFloat model.totalDays) * model.viewportSize.height
+            (completedDays / toFloat totalDays) * viewportSize.height
 
         progressBarHeightString =
             (String.fromInt <| round progressBarHeight) ++ "px"
@@ -311,6 +336,100 @@ editHabitModal model =
 
 
 
+---- Log Screen ----
+
+
+logScreen : Model -> Html Msg
+logScreen model =
+    div [ class "p-4" ]
+        [ logScreenHeader
+        , habitList model
+        ]
+
+
+logScreenHeader : Html Msg
+logScreenHeader =
+    div [ class "flex flex-row justify-between items-center mb-4" ]
+        [ div [ class header ] [ text "Habit Log" ]
+        , div [ class closeButton, onClick ToggleShowLog ] [ text "X" ]
+        ]
+
+
+habitList : Model -> Html msg
+habitList model =
+    div [] <| List.map (habitListItem model.timeZone) model.habitLog
+
+
+habitListItem : Time.Zone -> HabitEntry -> Html msg
+habitListItem timeZone { date, habit } =
+    div [ class "flex flex-row justify-between" ]
+        [ div [] [ text habit ]
+        , div [] [ text <| formatDate timeZone date ]
+        ]
+
+
+formatDate : Time.Zone -> Posix -> String
+formatDate zone date =
+    let
+        year =
+            String.fromInt <| Time.toYear zone date
+
+        month =
+            monthToString <| Time.toMonth zone date
+
+        day =
+            String.fromInt <| Time.toDay zone date
+
+        hour =
+            String.fromInt <| Time.toHour zone date
+
+        minute =
+            String.fromInt <| Time.toMinute zone date
+    in
+    month ++ "/" ++ day ++ "/" ++ year ++ " " ++ hour ++ ":" ++ minute
+
+
+monthToString : Time.Month -> String
+monthToString month =
+    case month of
+        Jan ->
+            "01"
+
+        Feb ->
+            "02"
+
+        Mar ->
+            "03"
+
+        Apr ->
+            "04"
+
+        May ->
+            "05"
+
+        Jun ->
+            "06"
+
+        Jul ->
+            "07"
+
+        Aug ->
+            "08"
+
+        Sep ->
+            "09"
+
+        Oct ->
+            "10"
+
+        Nov ->
+            "11"
+
+        Dec ->
+            "12"
+
+
+
 ---- PROGRAM ----
 
 
@@ -353,6 +472,11 @@ header =
 daysText : String
 daysText =
     "font-mono bold text-lg"
+
+
+closeButton : String
+closeButton =
+    "font-bold p-4 rounded-full"
 
 
 primaryButton : String
