@@ -8,10 +8,12 @@ import Habit
         ( Habit
         , HabitEntry
         , HabitLog
+        , addEntry
         , completedToday
         , decodeHabitLog
         , encodeHabitLog
         , timesHabitWasCompleted
+        , undoLastHabit
         )
 import Html exposing (Html, button, div, h1, text, textarea)
 import Html.Attributes exposing (class, classList, id, style, value)
@@ -59,7 +61,7 @@ init flags url key =
     ( { habit = flags.habit
       , habitLog = habitLog
       , editing = False
-      , showLog = True
+      , showLog = False
       , now = Time.millisToPosix 0
       , timeZone = Time.utc
       , viewportSize = ViewportSize 0
@@ -104,11 +106,8 @@ update msg model =
 
         LogHabit now ->
             let
-                habitEntry =
-                    { habit = model.habit, date = now }
-
                 nextLog =
-                    habitEntry :: model.habitLog
+                    addEntry model.habit now model.habitLog
             in
             ( { model | habitLog = nextLog }
             , saveHabitLog nextLog
@@ -117,12 +116,7 @@ update msg model =
         RemoveLastHabitEntry ->
             let
                 nextLog =
-                    case List.tail model.habitLog of
-                        Just v ->
-                            v
-
-                        Nothing ->
-                            []
+                    undoLastHabit model.habit model.habitLog
             in
             ( { model | habitLog = nextLog }
             , saveHabitLog nextLog

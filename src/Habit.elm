@@ -2,6 +2,7 @@ module Habit exposing (..)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
+import List.Extra
 import Time exposing (Month(..), Posix, toDay, toMonth, toYear, utc)
 
 
@@ -56,6 +57,29 @@ decodeHabitEntry =
 decodePosix : Int -> Decode.Decoder Posix
 decodePosix v =
     Decode.succeed <| Time.millisToPosix v
+
+
+
+---- CRUD ----
+
+
+addEntry : Habit -> Time.Posix -> HabitLog -> HabitLog
+addEntry habit now log =
+    { habit = habit, date = now } :: log
+
+
+undoLastHabit : Habit -> HabitLog -> HabitLog
+undoLastHabit habit log =
+    let
+        firstIdx =
+            List.Extra.findIndex (\entry -> isEqual entry.habit habit) log
+    in
+    case firstIdx of
+        Just idx ->
+            List.Extra.removeAt idx log
+
+        Nothing ->
+            log
 
 
 
