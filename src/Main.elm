@@ -3,6 +3,16 @@ port module Main exposing (..)
 import Browser
 import Browser.Dom
 import Browser.Navigation as Nav
+import Habit
+    exposing
+        ( Habit
+        , HabitEntry
+        , HabitLog
+        , completedToday
+        , decodeHabitLog
+        , encodeHabitLog
+        , timesHabitWasCompleted
+        )
 import Html exposing (Html, button, div, h1, text, textarea)
 import Html.Attributes exposing (class, classList, id, style, value)
 import Html.Events exposing (onClick, onInput)
@@ -10,26 +20,12 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Task
-import Time exposing (Month(..), Posix, toDay, toMonth, toYear, utc)
+import Time exposing (Posix)
 import Url
 
 
 
 ---- MODEL ----
-
-
-type alias Habit =
-    String
-
-
-type alias HabitEntry =
-    { habit : Habit
-    , date : Posix
-    }
-
-
-type alias HabitLog =
-    List HabitEntry
 
 
 type alias ViewportSize =
@@ -43,6 +39,7 @@ type alias Model =
     , totalDays : Int
     , editing : Bool
     , now : Posix
+    , timeZone : Time.Zone
     , viewportSize : ViewportSize
     }
 
@@ -64,10 +61,12 @@ init flags url key =
       , totalDays = 21
       , editing = False
       , now = Time.millisToPosix 0
+      , timeZone = Time.utc
       , viewportSize = ViewportSize 0
       }
     , Cmd.batch
         [ Task.perform Now Time.now
+        , Task.perform Zone Time.here
         , Task.perform GetViewport Browser.Dom.getViewport
         ]
     )
@@ -87,6 +86,7 @@ type Msg
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
     | Now Posix
+    | Zone Time.Zone
     | GetViewport Browser.Dom.Viewport
     | NoOp
 
@@ -147,6 +147,9 @@ update msg model =
         Now now ->
             ( { model | now = now }, Cmd.none )
 
+        Zone zone ->
+            ( { model | timeZone = zone }, Cmd.none )
+
         GetViewport viewport ->
             let
                 viewportSize =
@@ -159,6 +162,10 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
+
+
+
+--- Ports ---
 
 
 port saveHabitLocally : Encode.Value -> Cmd msg
@@ -175,70 +182,6 @@ port saveHabitLogLocally : Encode.Value -> Cmd msg
 saveHabitLog : HabitLog -> Cmd Msg
 saveHabitLog habitLog =
     saveHabitLogLocally <| encodeHabitLog habitLog
-
-
-encodeHabitLog : HabitLog -> Encode.Value
-encodeHabitLog habitLog =
-    Encode.list encodeHabitEntry habitLog
-
-
-encodeHabitEntry : HabitEntry -> Encode.Value
-encodeHabitEntry entry =
-    Encode.object
-        [ ( "habit", Encode.string entry.habit )
-        , ( "date", Encode.int (Time.posixToMillis entry.date) )
-        ]
-
-
-decodeHabitLog : Decode.Value -> HabitLog
-decodeHabitLog value =
-    case Decode.decodeValue (Decode.list decodeHabitEntry) value of
-        Ok history ->
-            history
-
-        Err _ ->
-            []
-
-
-decodeHabitEntry : Decode.Decoder HabitEntry
-decodeHabitEntry =
-    Decode.map2 HabitEntry
-        (Decode.field "habit" Decode.string)
-        (Decode.field "date" Decode.int |> Decode.andThen decodePosix)
-
-
-decodePosix : Int -> Decode.Decoder Posix
-decodePosix v =
-    Decode.succeed <| Time.millisToPosix v
-
-
-completedToday : Model -> Bool
-completedToday { habit, habitLog, now } =
-    let
-        logCompletedToday log =
-            log.habit == habit && isSameDay log.date now
-    in
-    List.any logCompletedToday habitLog
-
-
-isSameDay : Posix -> Posix -> Bool
-isSameDay now time =
-    (Time.toYear utc now == Time.toYear utc time)
-        && (Time.toMonth utc now == Time.toMonth utc time)
-        && (Time.toDay utc now == Time.toDay utc time)
-
-
-timesHabitWasCompleted : Habit -> HabitLog -> Int
-timesHabitWasCompleted habit habitLog =
-    let
-        isSameHabit habitEntry acc =
-            if habitEntry.habit == habit then
-                acc + 1
-
-            else
-                acc
-    in
-    List.foldl isSameHabit 0 habitLog
 
 
 
@@ -304,20 +247,20 @@ progressBar model =
 
 
 habitTextView : Model -> Html Msg
-habitTextView model =
+habitTextView { habit, now, habitLog, timeZone } =
     h1
         [ classList
             [ ( header ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
-            , ( "line-through", completedToday model )
+            , ( "line-through", completedToday timeZone habit now habitLog )
             ]
         , onClick StartEditHabit
         ]
-        [ text model.habit ]
+        [ text habit ]
 
 
 habitCompleteButton : Model -> Html Msg
-habitCompleteButton model =
-    if completedToday model then
+habitCompleteButton { habit, now, habitLog, timeZone } =
+    if completedToday timeZone habit now habitLog then
         div []
             [ button
                 [ class <| primaryButton ++ " text-gray-800"
@@ -333,8 +276,8 @@ habitCompleteButton model =
 
 
 completedTodayText : Model -> Html Msg
-completedTodayText model =
-    if completedToday model then
+completedTodayText { habit, now, habitLog, timeZone } =
+    if completedToday timeZone habit now habitLog then
         div
             [ class "absolute w-screen top-0 mt-8 text-gray-600 text-center"
             ]

@@ -19,6 +19,7 @@
     "build": "elm-format --validate src/ && elm-app build && npx cap sync",
     "start": "elm-app start",
     "open-ios": "npx cap open ios",
-    "open-android": "npx cap open android"
+    "open-android": "npx cap open android",
+    "test": "elm-test --complier ./node_modules/.bin/elm"
   }
 }
