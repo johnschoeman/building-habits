@@ -1,7 +1,7 @@
 port module Main exposing (..)
 
 import Browser
-import Browser.Dom
+import Browser.Dom exposing (Viewport)
 import Browser.Navigation as Nav
 import Habit
     exposing
@@ -38,7 +38,7 @@ type alias ViewportSize =
     }
 
 
-type alias Model =
+type alias Context =
     { habit : Habit
     , habitLog : HabitLog
     , editing : Bool
@@ -55,26 +55,47 @@ type alias Flags =
     }
 
 
+type alias BootData =
+    { flags : Flags
+    }
+
+
+type Model
+    = Booting BootData
+    | App Screen Context
+
+
+type Screen
+    = Habit
+    | Log
+    | EditHabit
+
+
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         habitLog =
             decodeHabitLog flags.habitLog
     in
-    ( { habit = flags.habit
-      , habitLog = habitLog
-      , editing = False
-      , showLog = False
-      , now = Time.millisToPosix 0
-      , timeZone = Time.utc
-      , viewportSize = ViewportSize 0
-      }
+    ( Booting { flags = flags }
     , Cmd.batch
         [ Task.perform Now Time.now
         , Task.perform Zone Time.here
         , Task.perform GetViewport Browser.Dom.getViewport
         ]
     )
+
+
+
+-- App
+--   { habit = flags.habit
+--   , habitLog = habitLog
+--   , editing = False
+--   , showLog = False
+--   , now = Time.millisToPosix 0
+--   , timeZone = Time.utc
+--   , viewportSize = ViewportSize 0
+--   }
 
 
 totalDays =
@@ -86,97 +107,177 @@ totalDays =
 
 
 type Msg
-    = CompleteHabit
-    | RemoveLastHabitEntry
-    | UpdateHabit Habit
-    | StartEditHabit
-    | EndEditHabit
-    | ToggleShowLog
-    | LogHabit Posix
+    = HandleHabitMsg HabitMsg
+    | HandleEditHabitsMsg EditHabitMsg
+    | HandleLogMsg LogMsg
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
+    | ChangedScreen Screen
     | Now Posix
     | Zone Time.Zone
     | GetViewport Browser.Dom.Viewport
     | NoOp
 
 
+type HabitMsg
+    = HabitChangeScreen Screen
+    | CompleteHabit
+    | LogHabit Posix
+    | RemoveLastHabitEntry
+
+
+type EditHabitMsg
+    = EditHabitChangeScreen Screen
+    | UpdateHabit Habit
+
+
+type LogMsg
+    = LogChangeScreen Screen
+    | LogNoOp
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    case ( msg, model ) of
+        ( _, Booting bootData ) ->
+            ( model, Cmd.none )
+
+        ( ChangedUrl _, App _ context ) ->
+            ( model, Cmd.none )
+
+        ( ClickedLink _, App _ context ) ->
+            ( model, Cmd.none )
+
+        ( ChangedScreen screen, App _ context ) ->
+            ( App screen context, Cmd.none )
+
+        ( Now now, App screen context ) ->
+            ( App screen { context | now = now }, Cmd.none )
+
+        ( Zone zone, App screen context ) ->
+            ( App screen { context | timeZone = zone }, Cmd.none )
+
+        ( GetViewport viewport, App screen context ) ->
+            let
+                viewportSize =
+                    context.viewportSize
+
+                nextViewportSize =
+                    { viewportSize | height = viewport.viewport.height }
+            in
+            ( App screen { context | viewportSize = nextViewportSize }, Cmd.none )
+
+        ( subModelMsg, App screen context ) ->
+            handleSubModelMsg screen context subModelMsg
+
+
+handleSubModelMsg : Screen -> Context -> Msg -> ( Model, Cmd Msg )
+handleSubModelMsg screen context msg =
+    case ( screen, msg ) of
+        ( Habit, HandleHabitMsg subMsg ) ->
+            let
+                ( nextScreen, nextContext, nextSubMsg ) =
+                    updateHabitScreen subMsg context
+            in
+            ( App nextScreen nextContext, Cmd.map HandleHabitMsg nextSubMsg )
+
+        ( Habit, _ ) ->
+            ( App Habit context, Cmd.none )
+
+        ( Log, HandleLogMsg subMsg ) ->
+            let
+                ( nextScreen, nextContext, nextSubMsg ) =
+                    updateLogScreen subMsg context
+            in
+            ( App nextScreen nextContext, Cmd.map HandleLogMsg nextSubMsg )
+
+        ( Log, _ ) ->
+            ( App Log context, Cmd.none )
+
+        ( EditHabit, HandleEditHabitsMsg subMsg ) ->
+            let
+                ( nextScreen, nextContext, nextSubMsg ) =
+                    updateEditHabitScreen subMsg context
+            in
+            ( App nextScreen nextContext, Cmd.map HandleEditHabitsMsg nextSubMsg )
+
+        ( EditHabit, _ ) ->
+            ( App EditHabit context, Cmd.none )
+
+
+updateHabitScreen : HabitMsg -> Context -> ( Screen, Context, Cmd HabitMsg )
+updateHabitScreen msg context =
     case msg of
+        HabitChangeScreen screen ->
+            ( screen, context, Cmd.none )
+
         CompleteHabit ->
-            ( model, Task.perform LogHabit Time.now )
+            ( Habit, context, Task.perform LogHabit Time.now )
 
         LogHabit now ->
             let
                 nextLog =
-                    addEntry model.habit now model.habitLog
+                    addEntry context.habit now context.habitLog
             in
-            ( { model | habitLog = nextLog }
+            ( Habit
+            , { context | habitLog = nextLog }
             , saveHabitLog nextLog
             )
 
         RemoveLastHabitEntry ->
             let
                 nextLog =
-                    undoLastHabit model.habit model.habitLog
+                    undoLastHabit context.habit context.habitLog
             in
-            ( { model | habitLog = nextLog }
+            ( Habit
+            , { context | habitLog = nextLog }
             , saveHabitLog nextLog
             )
 
+
+updateEditHabitScreen : EditHabitMsg -> Context -> ( Screen, Context, Cmd EditHabitMsg )
+updateEditHabitScreen msg context =
+    case msg of
+        EditHabitChangeScreen screen ->
+            ( screen, context, Cmd.none )
+
         UpdateHabit habit ->
-            ( { model | habit = habit }
+            ( EditHabit
+            , { context | habit = habit }
             , saveHabit habit
             )
 
-        StartEditHabit ->
-            let
-                focus =
-                    Task.attempt (\_ -> NoOp) (Browser.Dom.focus "edit-habit-input")
-            in
-            ( { model | editing = True }, focus )
 
-        EndEditHabit ->
-            ( { model | editing = False }, Cmd.none )
+updateLogScreen : LogMsg -> Context -> ( Screen, Context, Cmd LogMsg )
+updateLogScreen msg context =
+    case msg of
+        LogChangeScreen screen ->
+            ( screen, context, Cmd.none )
 
-        ToggleShowLog ->
-            ( { model | showLog = not model.showLog }, Cmd.none )
-
-        ChangedUrl _ ->
-            ( model, Cmd.none )
-
-        ClickedLink _ ->
-            ( model, Cmd.none )
-
-        Now now ->
-            ( { model | now = now }, Cmd.none )
-
-        Zone zone ->
-            ( { model | timeZone = zone }, Cmd.none )
-
-        GetViewport viewport ->
-            let
-                viewportSize =
-                    model.viewportSize
-
-                nextViewportSize =
-                    { viewportSize | height = viewport.viewport.height }
-            in
-            ( { model | viewportSize = nextViewportSize }, Cmd.none )
-
-        NoOp ->
-            ( model, Cmd.none )
+        LogNoOp ->
+            ( Log, context, Cmd.none )
 
 
 
---- Ports ---
+-- ( StartEditHabit, App context ) ->
+--     let
+--         focus =
+--             Task.attempt (\_ -> NoOp) (Browser.Dom.focus "edit-habit-input")
+--     in
+--     ( App { context | editing = True }, focus )
+--
+-- ( EndEditHabit, App context ) ->
+--     ( App { context | editing = False }, Cmd.none )
+--
+-- ( ToggleShowLog, App context ) ->
+--     ( App { context | showLog = not context.showLog }, Cmd.none )
+--- PORTS ---
 
 
 port saveHabitLocally : Encode.Value -> Cmd msg
 
 
-saveHabit : Habit -> Cmd Msg
+saveHabit : Habit -> Cmd EditHabitMsg
 saveHabit habit =
     saveHabitLocally <| Encode.string habit
 
@@ -184,7 +285,7 @@ saveHabit habit =
 port saveHabitLogLocally : Encode.Value -> Cmd msg
 
 
-saveHabitLog : HabitLog -> Cmd Msg
+saveHabitLog : HabitLog -> Cmd HabitMsg
 saveHabitLog habitLog =
     saveHabitLogLocally <| encodeHabitLog habitLog
 
@@ -193,48 +294,66 @@ saveHabitLog habitLog =
 ---- VIEW ----
 
 
+withoutCmd : a -> ( a, Cmd msg )
+withoutCmd val =
+    ( val, Cmd.none )
+
+
+withCmd : Cmd msg -> a -> ( a, Cmd msg )
+withCmd cmd val =
+    ( val, cmd )
+
+
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Building Habits"
-    , body = [ pageContent model ]
-    }
+    case model of
+        Booting _ ->
+            { title = "Building Habits"
+            , body = [ text "loading…" ]
+            }
+
+        App screen context ->
+            { title = "Building Habits"
+            , body = [ appContent screen context ]
+            }
 
 
-pageContent : Model -> Html Msg
-pageContent model =
-    div []
-        [ mainScreen model
-        , progressBar model
-        , editHabitModal model
-        ]
+appContent : Screen -> Context -> Html Msg
+appContent screen context =
+    div [] [ screenContent screen context ]
 
 
-mainScreen : Model -> Html Msg
-mainScreen model =
-    if model.showLog then
-        logScreen model
+screenContent : Screen -> Context -> Html Msg
+screenContent screen context =
+    case screen of
+        Habit ->
+            Html.map HandleHabitMsg <| habitScreen context
 
-    else
-        habitScreen model
+        EditHabit ->
+            Html.map HandleEditHabitsMsg <| editHabitScreen context
+
+        Log ->
+            Html.map HandleLogMsg <| logScreen context
 
 
 
 ---- Habit Screen ----
 
 
-habitScreen : Model -> Html Msg
-habitScreen model =
+habitScreen : Context -> Html HabitMsg
+habitScreen context =
     div [ class "fixed grid h-screen w-screen px-4 py-12 z-10" ]
         [ div [ class "flex flex-col justify-end" ]
-            [ habitTextView model
-            , habitCountIndicator model
+            [ habitTextView context
+            , habitCountIndicator context
             ]
-        , div [ class "flex items-end justify-center" ] [ habitCompleteButton model ]
-        , completedTodayText model
+        , div [ class "flex items-end justify-center" ] [ habitCompleteButton context ]
+        , completedTodayText context
+        , progressBar context
         ]
 
 
-habitCountIndicator : Model -> Html Msg
+habitCountIndicator : Context -> Html HabitMsg
 habitCountIndicator model =
     let
         { habit, habitLog } =
@@ -246,10 +365,10 @@ habitCountIndicator model =
                 ++ " / "
                 ++ String.fromInt totalDays
     in
-    div [ class Typography.body1, onClick ToggleShowLog ] [ text daysCompletedText ]
+    div [ class Typography.body1, onClick <| HabitChangeScreen Log ] [ text daysCompletedText ]
 
 
-progressBar : Model -> Html Msg
+progressBar : Context -> Html HabitMsg
 progressBar { habit, habitLog, viewportSize } =
     let
         completedDays =
@@ -268,19 +387,19 @@ progressBar { habit, habitLog, viewportSize } =
         []
 
 
-habitTextView : Model -> Html Msg
+habitTextView : Context -> Html HabitMsg
 habitTextView { habit, now, habitLog, timeZone } =
     h1
         [ classList
             [ ( Typography.header1 ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
             , ( "line-through", completedToday timeZone habit now habitLog )
             ]
-        , onClick StartEditHabit
+        , onClick <| HabitChangeScreen EditHabit
         ]
         [ text habit ]
 
 
-habitCompleteButton : Model -> Html Msg
+habitCompleteButton : Context -> Html HabitMsg
 habitCompleteButton { habit, now, habitLog, timeZone } =
     if completedToday timeZone habit now habitLog then
         div []
@@ -297,7 +416,7 @@ habitCompleteButton { habit, now, habitLog, timeZone } =
             [ Icons.check Colors.white 36 ]
 
 
-completedTodayText : Model -> Html Msg
+completedTodayText : Context -> Html HabitMsg
 completedTodayText { habit, now, habitLog, timeZone } =
     if completedToday timeZone habit now habitLog then
         div
@@ -309,8 +428,12 @@ completedTodayText { habit, now, habitLog, timeZone } =
         text ""
 
 
-editHabitModal : Model -> Html Msg
-editHabitModal model =
+
+---- Edit Habit Screen ----
+
+
+editHabitScreen : Context -> Html EditHabitMsg
+editHabitScreen model =
     div
         [ classList
             [ ( "absolute z-20 left-0 top-0 bottom-0 right-0 bg-white", True )
@@ -326,7 +449,7 @@ editHabitModal model =
             []
         , button
             [ class "absolute right-0 bottom-0 mr-8 mb-8 p-4 rounded-full bg-purple-700"
-            , onClick EndEditHabit
+            , onClick <| EditHabitChangeScreen Habit
             ]
             [ div [ class "mx-auto w-min-c" ] [ Icons.save Colors.white 36 ] ]
         ]
@@ -336,7 +459,7 @@ editHabitModal model =
 ---- Log Screen ----
 
 
-logScreen : Model -> Html Msg
+logScreen : Context -> Html LogMsg
 logScreen model =
     div [ class "p-4" ]
         [ logScreenHeader
@@ -344,15 +467,15 @@ logScreen model =
         ]
 
 
-logScreenHeader : Html Msg
+logScreenHeader : Html LogMsg
 logScreenHeader =
     div [ class "flex flex-row justify-between items-center mb-4" ]
         [ div [ class Typography.header1 ] [ text "Habit Log" ]
-        , div [ class Buttons.close, onClick ToggleShowLog ] [ text "X" ]
+        , div [ class Buttons.close, onClick <| LogChangeScreen Habit ] [ text "X" ]
         ]
 
 
-habitList : Model -> Html msg
+habitList : Context -> Html msg
 habitList model =
     div [] <| List.map (habitListItem model.timeZone) model.habitLog
 
