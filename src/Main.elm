@@ -15,7 +15,7 @@ import Habit
         , timesHabitWasCompleted
         , undoLastHabit
         )
-import Html exposing (Html, button, div, h1, text, textarea)
+import Html exposing (Html, button, div, h1, main_, text, textarea)
 import Html.Attributes exposing (class, classList, id, style, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
@@ -158,11 +158,11 @@ update msg model =
             ( App screen context, Cmd.none )
 
         ( App screen context, subModelMsg ) ->
-            handleSubModelMsg screen context subModelMsg
+            handleScreenMsg screen context subModelMsg
 
 
-handleSubModelMsg : Screen -> Context -> Msg -> ( Model, Cmd Msg )
-handleSubModelMsg screen context msg =
+handleScreenMsg : Screen -> Context -> Msg -> ( Model, Cmd Msg )
+handleScreenMsg screen context msg =
     case ( screen, msg ) of
         ( Habit, HandleHabitMsg subMsg ) ->
             let
@@ -296,7 +296,7 @@ view model =
 
 appContent : Screen -> Context -> Html Msg
 appContent screen context =
-    div [] [ screenContent screen context ]
+    screenContent screen context
 
 
 screenContent : Screen -> Context -> Html Msg
@@ -312,13 +312,18 @@ screenContent screen context =
             Html.map HandleLogMsg <| logScreen context
 
 
+fixedContent : List (Html msg) -> Html msg
+fixedContent children =
+    main_ [ class "relative h-screen max-w-lg m-auto flex flex-col p-4" ] children
+
+
 
 ---- Habit Screen ----
 
 
 habitScreen : Context -> Html HabitMsg
 habitScreen context =
-    div []
+    fixedContent
         [ habitInfo context
         , progressBar context
         ]
@@ -326,29 +331,16 @@ habitScreen context =
 
 habitInfo : Context -> Html HabitMsg
 habitInfo context =
-    div [ class "fixed grid h-screen w-screen px-4 py-12 z-10" ]
-        [ div [ class "flex flex-col justify-end" ]
+    div [ class "grid grid-rows-5 max-h-full flex-grow z-10" ]
+        [ div [ class "row-start-1 row-end-2 flex justify-center" ]
+            [ habitHeader context ]
+        , div [ class "row-start-2 row-end-5 flex flex-col justify-center" ]
             [ habitTextView context
             , habitCountIndicator context
             ]
-        , div [ class "flex items-end justify-center" ] [ habitCompleteButton context ]
-        , completedTodayText context
+        , div [ class "row-start-5 row-end-6 flex flex-col items-center justify-center" ]
+            [ habitCompleteButton context ]
         ]
-
-
-habitCountIndicator : Context -> Html HabitMsg
-habitCountIndicator model =
-    let
-        { habit, habitLog } =
-            model
-
-        daysCompletedText =
-            String.fromInt
-                (timesHabitWasCompleted habit habitLog)
-                ++ " / "
-                ++ String.fromInt totalDays
-    in
-    div [ class Typography.body1, onClick <| HabitChangeScreen Log ] [ text daysCompletedText ]
 
 
 progressBar : Context -> Html HabitMsg
@@ -375,26 +367,40 @@ progressBar { habit, habitLog, viewport } =
 
 habitTextView : Context -> Html HabitMsg
 habitTextView { habit, now, habitLog, timeZone } =
-    h1
-        [ classList
-            [ ( Typography.header1 ++ " overflow-y-hidden max-h-64 mb-10 break-anywhere", True )
-            , ( "line-through", completedToday timeZone habit now habitLog )
+    div [ class "flex flex-col justify-end mb-4" ]
+        [ h1
+            [ classList
+                [ ( Typography.header1 ++ " break-all", True )
+                , ( "line-through", completedToday timeZone habit now habitLog )
+                ]
+            , onClick <| HabitChangeScreen EditHabit
             ]
-        , onClick <| HabitChangeScreen EditHabit
+            [ text habit ]
         ]
-        [ text habit ]
+
+
+habitCountIndicator : Context -> Html HabitMsg
+habitCountIndicator model =
+    let
+        { habit, habitLog } =
+            model
+
+        daysCompletedText =
+            String.fromInt
+                (timesHabitWasCompleted habit habitLog)
+                ++ " / "
+                ++ String.fromInt totalDays
+    in
+    div [ class "" ]
+        [ div [ class Typography.body1, onClick <| HabitChangeScreen Log ] [ text daysCompletedText ]
+        ]
 
 
 habitCompleteButton : Context -> Html HabitMsg
 habitCompleteButton { habit, now, habitLog, timeZone } =
     if completedToday timeZone habit now habitLog then
-        div []
-            [ button
-                [ class <| Buttons.primary ++ " text-gray-800"
-                , onClick RemoveLastHabitEntry
-                ]
-                [ Icons.undo Colors.purple 36 ]
-            ]
+        button [ class <| Buttons.primary ++ " text-gray-800", onClick RemoveLastHabitEntry ]
+            [ Icons.undo Colors.purple 36 ]
 
     else
         button
@@ -402,16 +408,20 @@ habitCompleteButton { habit, now, habitLog, timeZone } =
             [ Icons.check Colors.white 36 ]
 
 
+habitHeader : Context -> Html HabitMsg
+habitHeader context =
+    div [ class "h-4" ]
+        [ completedTodayText context
+        ]
+
+
 completedTodayText : Context -> Html HabitMsg
 completedTodayText { habit, now, habitLog, timeZone } =
     if completedToday timeZone habit now habitLog then
-        div
-            [ class "absolute w-screen top-0 mt-8 text-gray-600 text-center"
-            ]
-            [ text "Come back tomorrow!" ]
+        text "Come back tomorrow!"
 
     else
-        text ""
+        text " "
 
 
 
@@ -420,23 +430,25 @@ completedTodayText { habit, now, habitLog, timeZone } =
 
 editHabitScreen : Context -> Html EditHabitMsg
 editHabitScreen model =
-    div
-        [ classList
-            [ ( "absolute z-20 left-0 top-0 bottom-0 right-0 bg-white", True )
+    fixedContent
+        [ div [ class "grid grid-rows-2 h-full" ]
+            [ div [ class "pt-8" ]
+                [ textarea
+                    [ value model.habit
+                    , onInput UpdateHabit
+                    , classList [ ( Typography.header1, True ), ( "resize-none w-full h-full", True ) ]
+                    , id "edit-habit-input"
+                    ]
+                    []
+                ]
+            , div [ class "flex justify-end items-end" ]
+                [ button
+                    [ class "p-4 rounded-full bg-purple-700"
+                    , onClick <| EditHabitChangeScreen Habit
+                    ]
+                    [ div [ class "mx-auto w-min-c" ] [ Icons.save Colors.white 36 ] ]
+                ]
             ]
-        ]
-        [ textarea
-            [ value model.habit
-            , onInput UpdateHabit
-            , classList [ ( Typography.header1, True ), ( "py-8 px-4 resize-none h-screen", True ) ]
-            , id "edit-habit-input"
-            ]
-            []
-        , button
-            [ class "absolute right-0 bottom-0 mr-8 mb-8 p-4 rounded-full bg-purple-700"
-            , onClick <| EditHabitChangeScreen Habit
-            ]
-            [ div [ class "mx-auto w-min-c" ] [ Icons.save Colors.white 36 ] ]
         ]
 
 
@@ -446,7 +458,7 @@ editHabitScreen model =
 
 logScreen : Context -> Html LogMsg
 logScreen model =
-    div [ class "p-4" ]
+    fixedContent
         [ logScreenHeader
         , habitList model
         ]

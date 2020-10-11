@@ -12,7 +12,9 @@ module.exports = {
       "5": "5 5 0%",
     },
     maxHeight: {
+      "32": "8rem",
       "64": "16rem",
+      screen: "100vh",
       full: "100%",
     },
     gridTemplateColumns: {
