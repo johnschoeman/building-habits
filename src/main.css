@@ -22,6 +22,11 @@
   outline: none;
 }
 
+body {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 textarea, input {
   -webkit-appearance: none;
 }

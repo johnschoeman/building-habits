@@ -314,7 +314,7 @@ screenContent screen context =
 
 fixedContent : List (Html msg) -> Html msg
 fixedContent children =
-    main_ [ class "relative h-screen max-w-lg m-auto flex flex-col p-4" ] children
+    main_ [ class "relative h-screen max-w-lg m-auto flex flex-col py-8 px-4" ] children
 
 
 
@@ -359,7 +359,7 @@ progressBar { habit, habitLog, viewport } =
             (String.fromInt <| round progressBarHeight) ++ "px"
     in
     div
-        [ class "fixed bottom-0 left-0 w-full z-0 bg-purple-100"
+        [ class "fixed bottom-0 left-0 w-full z-0 bg-purple-100 transition-height duration-1000 ease-in-out"
         , style "height" progressBarHeightString
         ]
         []
@@ -370,7 +370,7 @@ habitTextView { habit, now, habitLog, timeZone } =
     div [ class "flex flex-col justify-end mb-4" ]
         [ h1
             [ classList
-                [ ( Typography.header1 ++ " break-all", True )
+                [ ( Typography.header1 ++ " break-anywhere", True )
                 , ( "line-through", completedToday timeZone habit now habitLog )
                 ]
             , onClick <| HabitChangeScreen EditHabit
@@ -431,8 +431,13 @@ completedTodayText { habit, now, habitLog, timeZone } =
 editHabitScreen : Context -> Html EditHabitMsg
 editHabitScreen model =
     fixedContent
-        [ div [ class "grid grid-rows-2 h-full" ]
-            [ div [ class "pt-8" ]
+        [ div [ class "flex flex-col h-full" ]
+            [ button
+                [ class "w-min-c h-min-c py-3 px-4 self-end bg-purple-700 rounded"
+                , onClick <| EditHabitChangeScreen Habit
+                ]
+                [ div [ class "text-white font-bold" ] [ text "Done" ] ]
+            , div [ class "flex-grow pt-4" ]
                 [ textarea
                     [ value model.habit
                     , onInput UpdateHabit
@@ -440,13 +445,6 @@ editHabitScreen model =
                     , id "edit-habit-input"
                     ]
                     []
-                ]
-            , div [ class "flex justify-end items-end" ]
-                [ button
-                    [ class "p-4 rounded-full bg-purple-700"
-                    , onClick <| EditHabitChangeScreen Habit
-                    ]
-                    [ div [ class "mx-auto w-min-c" ] [ Icons.save Colors.white 36 ] ]
                 ]
             ]
         ]

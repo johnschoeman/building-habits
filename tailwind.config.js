@@ -1,5 +1,10 @@
 module.exports = {
   theme: {
+    extend: {
+      transitionProperty: {
+        height: "height",
+      }
+    },
     flex: {
       "1": "1 1 0%",
       auto: "1 1 auto",
