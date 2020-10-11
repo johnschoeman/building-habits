@@ -33,19 +33,26 @@ import Url
 ---- MODEL ----
 
 
-type alias ViewportSize =
-    { height : Float
-    }
-
-
 type alias Context =
     { habit : Habit
     , habitLog : HabitLog
-    , editing : Bool
-    , showLog : Bool
     , now : Posix
     , timeZone : Time.Zone
-    , viewportSize : ViewportSize
+    , viewport : Viewport
+    }
+
+
+buildInitialContext : BootData -> SystemData -> Context
+buildInitialContext { flags } { now, zone, viewport } =
+    let
+        habitLog =
+            decodeHabitLog flags.habitLog
+    in
+    { habit = flags.habit
+    , habitLog = habitLog
+    , now = now
+    , timeZone = zone
+    , viewport = viewport
     }
 
 
@@ -60,6 +67,13 @@ type alias BootData =
     }
 
 
+type alias SystemData =
+    { now : Posix
+    , zone : Time.Zone
+    , viewport : Viewport
+    }
+
+
 type Model
     = Booting BootData
     | App Screen Context
@@ -71,35 +85,22 @@ type Screen
     | EditHabit
 
 
+totalDays =
+    21
+
+
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
-        habitLog =
-            decodeHabitLog flags.habitLog
+        getSystemData =
+            Task.map3 SystemData
+                Time.now
+                Time.here
+                Browser.Dom.getViewport
     in
     ( Booting { flags = flags }
-    , Cmd.batch
-        [ Task.perform Now Time.now
-        , Task.perform Zone Time.here
-        , Task.perform GetViewport Browser.Dom.getViewport
-        ]
+    , Task.perform GotSystemData getSystemData
     )
-
-
-
--- App
---   { habit = flags.habit
---   , habitLog = habitLog
---   , editing = False
---   , showLog = False
---   , now = Time.millisToPosix 0
---   , timeZone = Time.utc
---   , viewportSize = ViewportSize 0
---   }
-
-
-totalDays =
-    21
 
 
 
@@ -107,16 +108,13 @@ totalDays =
 
 
 type Msg
-    = HandleHabitMsg HabitMsg
+    = GotSystemData SystemData
+    | ClickedLink Browser.UrlRequest
+    | ChangedUrl Url.Url
+    | ChangedScreen Screen
+    | HandleHabitMsg HabitMsg
     | HandleEditHabitsMsg EditHabitMsg
     | HandleLogMsg LogMsg
-    | ChangedUrl Url.Url
-    | ClickedLink Browser.UrlRequest
-    | ChangedScreen Screen
-    | Now Posix
-    | Zone Time.Zone
-    | GetViewport Browser.Dom.Viewport
-    | NoOp
 
 
 type HabitMsg
@@ -124,6 +122,7 @@ type HabitMsg
     | CompleteHabit
     | LogHabit Posix
     | RemoveLastHabitEntry
+    | HabitNoOp
 
 
 type EditHabitMsg
@@ -138,36 +137,27 @@ type LogMsg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model ) of
-        ( _, Booting bootData ) ->
+    case ( model, msg ) of
+        ( Booting bootData, GotSystemData systemData ) ->
+            let
+                initialContext =
+                    buildInitialContext bootData systemData
+            in
+            ( App Habit initialContext, Cmd.none )
+
+        ( Booting bootData, _ ) ->
             ( model, Cmd.none )
 
-        ( ChangedUrl _, App _ context ) ->
+        ( App _ context, ChangedUrl _ ) ->
             ( model, Cmd.none )
 
-        ( ClickedLink _, App _ context ) ->
+        ( App _ context, ClickedLink _ ) ->
             ( model, Cmd.none )
 
-        ( ChangedScreen screen, App _ context ) ->
+        ( App _ context, ChangedScreen screen ) ->
             ( App screen context, Cmd.none )
 
-        ( Now now, App screen context ) ->
-            ( App screen { context | now = now }, Cmd.none )
-
-        ( Zone zone, App screen context ) ->
-            ( App screen { context | timeZone = zone }, Cmd.none )
-
-        ( GetViewport viewport, App screen context ) ->
-            let
-                viewportSize =
-                    context.viewportSize
-
-                nextViewportSize =
-                    { viewportSize | height = viewport.viewport.height }
-            in
-            ( App screen { context | viewportSize = nextViewportSize }, Cmd.none )
-
-        ( subModelMsg, App screen context ) ->
+        ( App screen context, subModelMsg ) ->
             handleSubModelMsg screen context subModelMsg
 
 
@@ -209,7 +199,12 @@ updateHabitScreen : HabitMsg -> Context -> ( Screen, Context, Cmd HabitMsg )
 updateHabitScreen msg context =
     case msg of
         HabitChangeScreen screen ->
-            ( screen, context, Cmd.none )
+            case screen of
+                EditHabit ->
+                    ( EditHabit, context, Task.attempt (\_ -> HabitNoOp) (Browser.Dom.focus "edit-habit-input") )
+
+                _ ->
+                    ( screen, context, Cmd.none )
 
         CompleteHabit ->
             ( Habit, context, Task.perform LogHabit Time.now )
@@ -233,6 +228,9 @@ updateHabitScreen msg context =
             , { context | habitLog = nextLog }
             , saveHabitLog nextLog
             )
+
+        HabitNoOp ->
+            ( Habit, context, Cmd.none )
 
 
 updateEditHabitScreen : EditHabitMsg -> Context -> ( Screen, Context, Cmd EditHabitMsg )
@@ -259,18 +257,6 @@ updateLogScreen msg context =
 
 
 
--- ( StartEditHabit, App context ) ->
---     let
---         focus =
---             Task.attempt (\_ -> NoOp) (Browser.Dom.focus "edit-habit-input")
---     in
---     ( App { context | editing = True }, focus )
---
--- ( EndEditHabit, App context ) ->
---     ( App { context | editing = False }, Cmd.none )
---
--- ( ToggleShowLog, App context ) ->
---     ( App { context | showLog = not context.showLog }, Cmd.none )
 --- PORTS ---
 
 
@@ -292,16 +278,6 @@ saveHabitLog habitLog =
 
 
 ---- VIEW ----
-
-
-withoutCmd : a -> ( a, Cmd msg )
-withoutCmd val =
-    ( val, Cmd.none )
-
-
-withCmd : Cmd msg -> a -> ( a, Cmd msg )
-withCmd cmd val =
-    ( val, cmd )
 
 
 view : Model -> Browser.Document Msg
@@ -342,6 +318,14 @@ screenContent screen context =
 
 habitScreen : Context -> Html HabitMsg
 habitScreen context =
+    div []
+        [ habitInfo context
+        , progressBar context
+        ]
+
+
+habitInfo : Context -> Html HabitMsg
+habitInfo context =
     div [ class "fixed grid h-screen w-screen px-4 py-12 z-10" ]
         [ div [ class "flex flex-col justify-end" ]
             [ habitTextView context
@@ -349,7 +333,6 @@ habitScreen context =
             ]
         , div [ class "flex items-end justify-center" ] [ habitCompleteButton context ]
         , completedTodayText context
-        , progressBar context
         ]
 
 
@@ -369,13 +352,16 @@ habitCountIndicator model =
 
 
 progressBar : Context -> Html HabitMsg
-progressBar { habit, habitLog, viewportSize } =
+progressBar { habit, habitLog, viewport } =
     let
+        height =
+            viewport.viewport.height
+
         completedDays =
             toFloat <| timesHabitWasCompleted habit habitLog
 
         progressBarHeight =
-            (completedDays / toFloat totalDays) * viewportSize.height
+            (completedDays / toFloat totalDays) * height
 
         progressBarHeightString =
             (String.fromInt <| round progressBarHeight) ++ "px"
@@ -437,7 +423,6 @@ editHabitScreen model =
     div
         [ classList
             [ ( "absolute z-20 left-0 top-0 bottom-0 right-0 bg-white", True )
-            , ( "hidden", not model.editing )
             ]
         ]
         [ textarea
