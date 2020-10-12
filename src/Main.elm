@@ -432,11 +432,19 @@ editHabitScreen : Context -> Html EditHabitMsg
 editHabitScreen model =
     fixedContent
         [ div [ class "flex flex-col h-full" ]
-            [ button
-                [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
-                , onClick <| EditHabitChangeScreen Habit
+            [ div [ class "flex justify-between pb-4" ]
+                [ button
+                    [ class "self-start w-min-c h-min-c py-3 px-4"
+                    , onClick <| UpdateHabit ""
+                    ]
+                    [ div [ class "text-gray-400 font-bold" ] [ text "Clear" ] ]
+                , button
+                    [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
+                    , onClick <| EditHabitChangeScreen Habit
+                    ]
+                    [ div [ class "text-white font-bold" ] [ text "Done" ]
+                    ]
                 ]
-                [ div [ class "text-white font-bold" ] [ text "Done" ] ]
             , textarea
                 [ value model.habit
                 , onInput UpdateHabit
