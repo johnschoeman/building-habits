@@ -314,7 +314,7 @@ screenContent screen context =
 
 fixedContent : List (Html msg) -> Html msg
 fixedContent children =
-    main_ [ class "relative h-screen max-w-lg m-auto flex flex-col py-8 px-4" ] children
+    main_ [ class "relative h-screen max-w-lg m-auto flex flex-col pt-12 pb-8 px-4" ] children
 
 
 
@@ -392,7 +392,7 @@ habitCountIndicator model =
                 ++ String.fromInt totalDays
     in
     div [ class "" ]
-        [ div [ class Typography.body1, onClick <| HabitChangeScreen Log ] [ text daysCompletedText ]
+        [ div [ class Typography.body1 ] [ text daysCompletedText ]
         ]
 
 
