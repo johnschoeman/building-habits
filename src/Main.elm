@@ -323,9 +323,24 @@ fixedContent children =
 
 habitScreen : Context -> Html HabitMsg
 habitScreen context =
-    fixedContent
-        [ habitInfo context
-        , progressBar context
+    if String.length context.habit == 0 then
+        fixedContent [ addHabitButton ]
+
+    else
+        fixedContent
+            [ habitInfo context
+            , progressBar context
+            ]
+
+
+addHabitButton : Html HabitMsg
+addHabitButton =
+    div [ class "flex justify-center items-center h-full" ]
+        [ button
+            [ class <| "text-white font-bold px-6 py-4 rounded bg-purple-700 hover:bg-purple-800"
+            , onClick <| HabitChangeScreen EditHabit
+            ]
+            [ text "Add a habit" ]
         ]
 
 
