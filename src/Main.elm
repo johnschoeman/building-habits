@@ -314,7 +314,7 @@ screenContent screen context =
 
 fixedContent : List (Html msg) -> Html msg
 fixedContent children =
-    main_ [ class "relative h-screen max-w-lg m-auto flex flex-col pt-12 pb-8 px-4" ] children
+    main_ [ class "h-screen max-w-lg m-auto flex flex-col pt-12 pb-8 px-4" ] children
 
 
 
@@ -334,7 +334,7 @@ habitInfo context =
     div [ class "grid grid-rows-5 max-h-full flex-grow z-10" ]
         [ div [ class "row-start-1 row-end-2 flex justify-center" ]
             [ habitHeader context ]
-        , div [ class "row-start-2 row-end-5 flex flex-col justify-center" ]
+        , div [ class "row-start-2 row-end-5 flex flex-col justify-center max-h-full" ]
             [ habitTextView context
             , habitCountIndicator context
             ]
@@ -367,10 +367,10 @@ progressBar { habit, habitLog, viewport } =
 
 habitTextView : Context -> Html HabitMsg
 habitTextView { habit, now, habitLog, timeZone } =
-    div [ class "flex flex-col justify-end mb-4" ]
+    div [ class "flex flex-col justify-end mb-4 max-h-full" ]
         [ h1
             [ classList
-                [ ( Typography.header1 ++ " break-anywhere", True )
+                [ ( Typography.header1 ++ " break-anywhere overflow-y-scroll", True )
                 , ( "line-through", completedToday timeZone habit now habitLog )
                 ]
             , onClick <| HabitChangeScreen EditHabit
@@ -433,19 +433,17 @@ editHabitScreen model =
     fixedContent
         [ div [ class "flex flex-col h-full" ]
             [ button
-                [ class "w-min-c h-min-c py-3 px-4 self-end bg-purple-700 rounded"
+                [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
                 , onClick <| EditHabitChangeScreen Habit
                 ]
                 [ div [ class "text-white font-bold" ] [ text "Done" ] ]
-            , div [ class "flex-grow pt-4" ]
-                [ textarea
-                    [ value model.habit
-                    , onInput UpdateHabit
-                    , classList [ ( Typography.header1, True ), ( "resize-none w-full h-full", True ) ]
-                    , id "edit-habit-input"
-                    ]
-                    []
+            , textarea
+                [ value model.habit
+                , onInput UpdateHabit
+                , classList [ ( Typography.header1, True ), ( "resize-none w-full h-full", True ) ]
+                , id "edit-habit-input"
                 ]
+                []
             ]
         ]
 
