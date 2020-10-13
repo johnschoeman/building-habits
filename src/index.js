@@ -1,6 +1,11 @@
 import "./output.css";
 import { Elm } from "./Main.elm";
 import * as serviceWorker from "./serviceWorker";
+import { Plugins } from "@capacitor/core";
+
+const { StatusBar } = Plugins;
+
+StatusBar.setStyle({ style: "LIGHT" });
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
@@ -44,4 +49,3 @@ app.ports.saveHabitLocally.subscribe((habit) => {
 app.ports.saveHabitLogLocally.subscribe((habitLog) => {
   saveHabitLogLocally(habitLog);
 });
-
