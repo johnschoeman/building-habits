@@ -6,11 +6,13 @@ import Browser.Navigation as Nav
 import Habit
     exposing
         ( Habit
-        , HabitEntry
+        , HabitCompletionEvent
         , HabitLog
         , addEntry
         , completedToday
+        , decodeHabit
         , decodeHabitLog
+        , encodeHabit
         , encodeHabitLog
         , timesHabitWasCompleted
         , undoLastHabit
@@ -47,8 +49,11 @@ buildInitialContext { flags } { now, zone, viewport } =
     let
         habitLog =
             decodeHabitLog flags.habitLog
+
+        habit =
+            decodeHabit flags.habit
     in
-    { habit = flags.habit
+    { habit = habit
     , habitLog = habitLog
     , now = now
     , timeZone = zone
@@ -57,7 +62,7 @@ buildInitialContext { flags } { now, zone, viewport } =
 
 
 type alias Flags =
-    { habit : String
+    { habit : Decode.Value
     , habitLog : Decode.Value
     }
 
@@ -127,7 +132,7 @@ type HabitMsg
 
 type EditHabitMsg
     = EditHabitChangeScreen Screen
-    | UpdateHabit Habit
+    | UpdateHabit String
 
 
 type LogMsg
@@ -239,10 +244,17 @@ updateEditHabitScreen msg context =
         EditHabitChangeScreen screen ->
             ( screen, context, Cmd.none )
 
-        UpdateHabit habit ->
+        UpdateHabit habitTitle ->
+            let
+                oldHabit =
+                    context.habit
+
+                nextHabit =
+                    { oldHabit | id = habitTitle, title = habitTitle }
+            in
             ( EditHabit
-            , { context | habit = habit }
-            , saveHabit habit
+            , { context | habit = nextHabit }
+            , saveHabit nextHabit
             )
 
 
@@ -265,7 +277,7 @@ port saveHabitLocally : Encode.Value -> Cmd msg
 
 saveHabit : Habit -> Cmd EditHabitMsg
 saveHabit habit =
-    saveHabitLocally <| Encode.string habit
+    saveHabitLocally <| encodeHabit habit
 
 
 port saveHabitLogLocally : Encode.Value -> Cmd msg
@@ -323,7 +335,7 @@ fixedContent children =
 
 habitScreen : Context -> Html HabitMsg
 habitScreen context =
-    if String.length context.habit == 0 then
+    if String.length context.habit.title == 0 then
         fixedContent [ addHabitButton ]
 
     else
@@ -390,7 +402,7 @@ habitTextView { habit, now, habitLog, timeZone } =
                 ]
             , onClick <| HabitChangeScreen EditHabit
             ]
-            [ text habit ]
+            [ text habit.title ]
         ]
 
 
@@ -461,7 +473,7 @@ editHabitScreen model =
                     ]
                 ]
             , textarea
-                [ value model.habit
+                [ value model.habit.title
                 , onInput UpdateHabit
                 , classList [ ( Typography.header1, True ), ( "resize-none w-full h-full", True ) ]
                 , id "edit-habit-input"
@@ -496,10 +508,10 @@ habitList model =
     div [] <| List.map (habitListItem model.timeZone) model.habitLog
 
 
-habitListItem : Time.Zone -> HabitEntry -> Html msg
+habitListItem : Time.Zone -> HabitCompletionEvent -> Html msg
 habitListItem timeZone { date, habit } =
     div [ class "flex flex-row justify-between" ]
-        [ div [] [ text habit ]
+        [ div [] [ text habit.title ]
         , div [] [ text <| formatDate timeZone date ]
         ]
 

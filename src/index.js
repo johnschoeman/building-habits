@@ -13,12 +13,19 @@ StatusBar.setStyle({ style: "LIGHT" });
 serviceWorker.register();
 
 // Local Storage
-const habitKey = "buildinghabits.habit";
-const habitLogKey = "buildinghabits.habit-log";
+const habitKeyV1 = "buildinghabits.habit";
+const habitKeyV2 = "buildinghabits.habit-v2";
+const habitLogKeyV1 = "buildinghabits.habit-log";
+const habitLogKeyV2 = "buildinghabits.habit-log-v2";
 
 const fetchHabitDataFromLocalStorage = () => {
-  const habit = JSON.parse(localStorage.getItem(habitKey));
-  const habitLog = JSON.parse(localStorage.getItem(habitLogKey));
+  const habitV1 = JSON.parse(localStorage.getItem(habitKeyV1));
+  const habitV2 = JSON.parse(localStorage.getItem(habitKeyV2));
+  const habitLogV1 = JSON.parse(localStorage.getItem(habitLogKeyV1));
+  const habitLogV2 = JSON.parse(localStorage.getItem(habitLogKeyV2));
+
+  const habit = habitV2 ? habitV2 : { id: habitV1, title: habitV1 };
+  const habitLog = habitLogV2 ? habitLogV2 : habitLogV1;
 
   return {
     habit: habit || "Log a habit right after lunch",
@@ -27,11 +34,12 @@ const fetchHabitDataFromLocalStorage = () => {
 };
 
 const saveHabitLocally = (habit) => {
-  localStorage.setItem(habitKey, JSON.stringify(habit));
+  localStorage.setItem(habitKeyV2, JSON.stringify(habit));
 };
 
 const saveHabitLogLocally = (habitLog) => {
-  localStorage.setItem(habitLogKey, JSON.stringify(habitLog));
+  console.log("saving Habit");
+  localStorage.setItem(habitLogKeyV2, JSON.stringify(habitLog));
 };
 
 const localHabitData = fetchHabitDataFromLocalStorage();
