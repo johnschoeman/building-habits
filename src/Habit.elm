@@ -28,6 +28,11 @@ type alias HabitLog =
     List HabitCompletionEvent
 
 
+valid : Habit -> Bool
+valid habit =
+    String.length habit.title > 0
+
+
 
 ---- Encoding / Decoding ----
 
