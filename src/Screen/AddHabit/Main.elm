@@ -1,9 +1,9 @@
-port module Screen.EditHabit.Main exposing (Model, Msg, init, update, view)
+port module Screen.AddHabit.Main exposing (Model, Msg, init, update, view)
 
 import Context exposing (Context)
 import Habit exposing (Habit, HabitLog, encodeHabit)
 import Html exposing (Html, button, div, h1, main_, text, textarea)
-import Html.Attributes exposing (class, classList, id, value)
+import Html.Attributes exposing (class, classList, id, placeholder, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Encode as Encode
 import Route exposing (Navigation, Route(..))
@@ -19,22 +19,19 @@ type alias Model =
 
 init : Context -> Model
 init context =
-    { habitTitle = context.habit.title, errorMsg = "" }
+    { habitTitle = "", errorMsg = "" }
 
 
 type Msg
     = UpdateFormInput String
     | SaveHabit
-
-
-
--- ( Route.EditHabit, context, Task.attempt (\_ -> HabitNoOp) (Browser.Dom.focus "edit-habit-input") )
+    | HandleOnTapCancel
 
 
 type alias NextState =
     { nextCtx : Context
-    , nextModel : Model
     , nextNav : Navigation
+    , nextModel : Model
     , nextSubMsg : Cmd Msg
     }
 
@@ -42,42 +39,53 @@ type alias NextState =
 update : Model -> Msg -> Context -> Navigation -> NextState
 update model msg ctx nav =
     case msg of
+        HandleOnTapCancel ->
+            { nextCtx = ctx
+            , nextNav =
+                { nav | currentRoute = Route.Dashboard }
+            , nextModel = model
+            , nextSubMsg = Cmd.none
+            }
+
         UpdateFormInput habit ->
             { nextCtx = ctx
-            , nextModel = { model | habitTitle = habit, errorMsg = "" }
             , nextNav = nav
+            , nextModel = { model | habitTitle = habit, errorMsg = "" }
             , nextSubMsg = Cmd.none
             }
 
         SaveHabit ->
             let
-                oldHabit =
-                    ctx.habit
-
                 nextHabit =
-                    { oldHabit | title = model.habitTitle }
+                    { id = slugify model.habitTitle, title = model.habitTitle }
             in
             if Habit.isValid nextHabit then
                 { nextCtx = { ctx | habit = nextHabit }
-                , nextModel = model
                 , nextNav = { nav | currentRoute = Route.Dashboard }
-                , nextSubMsg = updateHabit nextHabit
+                , nextModel = model
+                , nextSubMsg = createHabit nextHabit
                 }
 
             else
                 { nextCtx = ctx
-                , nextModel = { model | errorMsg = "Invalid Habit" }
                 , nextNav = nav
+                , nextModel = { model | errorMsg = "Invalid Habit" }
                 , nextSubMsg = Cmd.none
                 }
 
 
-updateHabit : Habit -> Cmd Msg
-updateHabit habit =
-    updateHabitLocally <| encodeHabit habit
+slugify : String -> String
+slugify string =
+    String.replace " " "" string
+        |> String.toLower
 
 
-port updateHabitLocally : Encode.Value -> Cmd msg
+createHabit : Habit -> Cmd Msg
+createHabit habit =
+    createHabitLocally <| encodeHabit habit
+
+
+port createHabitLocally : Encode.Value -> Cmd msg
 
 
 view : Model -> Context -> Html Msg
@@ -90,9 +98,14 @@ view model context =
                     , onClick <| UpdateFormInput ""
                     ]
                     [ div [ class "text-gray-400 font-bold" ] [ text "Clear" ] ]
-                , div [ class "flex flex-col" ]
-                    [ div [ class "text-gray-800" ] [ text "Edit Habit" ]
-                    , div [ class "text-red-400" ] [ text model.errorMsg ]
+                , button
+                    [ class "self-start w-min-c h-min-c py-3 px-4"
+                    , onClick HandleOnTapCancel
+                    ]
+                    [ div [ class "text-red-400 font-bold" ] [ text "Cancel" ] ]
+                , div []
+                    [ div [] [ text "Create habit" ]
+                    , div [] [ text model.errorMsg ]
                     ]
                 , button
                     [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
@@ -103,6 +116,7 @@ view model context =
                 ]
             , textarea
                 [ value model.habitTitle
+                , placeholder "Every morning, before my coffee, I will..."
                 , onInput UpdateFormInput
                 , classList [ ( Typography.header1, True ), ( "resize-none w-full h-full", True ) ]
                 , id "edit-habit-input"

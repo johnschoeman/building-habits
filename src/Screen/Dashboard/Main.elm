@@ -16,7 +16,7 @@ import Html.Attributes exposing (class, classList, id, style, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Encode as Encode
-import Route exposing (Route)
+import Route exposing (Navigation, Route)
 import Screen.ViewHelpers exposing (fixedContent)
 import Styles.Buttons as Buttons
 import Styles.Colors as Colors
@@ -26,7 +26,8 @@ import Time exposing (Posix)
 
 
 type Msg
-    = DashboardChangeRoute Route
+    = HandleOnTapCreateHabit
+    | HandleOnTapEditHabit
     | CompleteHabit
     | LogHabit Posix
     | RemoveLastHabitEntry
@@ -37,42 +38,59 @@ totalDays =
     21
 
 
-update : Msg -> Context -> ( Context, Cmd Msg )
-update msg context =
-    case msg of
-        DashboardChangeRoute route ->
-            let
-                oldNav =
-                    context.navigation
+type alias NextState =
+    { nextCtx : Context
+    , nextNav : Navigation
+    , nextSubMsg : Cmd Msg
+    }
 
-                nextNav =
-                    { oldNav | currentRoute = route }
-            in
-            ( { context | navigation = nextNav }, Cmd.none )
+
+update : Msg -> Context -> Navigation -> NextState
+update msg ctx nav =
+    case msg of
+        HandleOnTapCreateHabit ->
+            { nextCtx = ctx
+            , nextNav = { nav | currentRoute = Route.AddHabit }
+            , nextSubMsg = Cmd.none
+            }
+
+        HandleOnTapEditHabit ->
+            { nextCtx = ctx
+            , nextNav = { nav | currentRoute = Route.EditHabit }
+            , nextSubMsg = Cmd.none
+            }
 
         CompleteHabit ->
-            ( context, Task.perform LogHabit Time.now )
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextSubMsg = Task.perform LogHabit Time.now
+            }
 
         LogHabit now ->
             let
                 nextLog =
-                    addEntry context.habit now context.habitLog
+                    addEntry ctx.habit now ctx.habitLog
             in
-            ( { context | habitLog = nextLog }
-            , saveHabitLog nextLog
-            )
+            { nextCtx = { ctx | habitLog = nextLog }
+            , nextNav = nav
+            , nextSubMsg = saveHabitLog nextLog
+            }
 
         RemoveLastHabitEntry ->
             let
                 nextLog =
-                    undoLastHabit context.habit context.habitLog
+                    undoLastHabit ctx.habit ctx.habitLog
             in
-            ( { context | habitLog = nextLog }
-            , saveHabitLog nextLog
-            )
+            { nextCtx = { ctx | habitLog = nextLog }
+            , nextNav = nav
+            , nextSubMsg = saveHabitLog nextLog
+            }
 
         HabitNoOp ->
-            ( context, Cmd.none )
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextSubMsg = Cmd.none
+            }
 
 
 port saveHabitLogLocally : Encode.Value -> Cmd msg
@@ -99,10 +117,10 @@ createHabitButton : Html Msg
 createHabitButton =
     div [ class "flex justify-center items-center h-full" ]
         [ button
-            [ class <| "text-white font-bold px-6 py-4 rounded bg-purple-700 hover:bg-purple-800"
-            , onClick <| DashboardChangeRoute Route.EditHabit
+            [ class <| "text-gray-800 font-bold px-6 py-4 underline"
+            , onClick HandleOnTapCreateHabit
             ]
-            [ text "Add a habit" ]
+            [ text "Start new habit" ]
         ]
 
 
@@ -150,7 +168,7 @@ habitTextView { habit, now, habitLog, timeZone } =
                 [ ( Typography.header1 ++ " break-anywhere overflow-y-scroll", True )
                 , ( "line-through", completedToday timeZone habit now habitLog )
                 ]
-            , onClick <| DashboardChangeRoute Route.EditHabit
+            , onClick HandleOnTapEditHabit
             ]
             [ text habit.title ]
         ]
@@ -167,6 +185,7 @@ habitCountIndicator model =
                 (timesHabitWasCompleted habit habitLog)
                 ++ " / "
                 ++ String.fromInt totalDays
+                ++ " days"
     in
     div [ class "" ]
         [ div [ class Typography.body1 ] [ text daysCompletedText ]
@@ -187,15 +206,4 @@ habitCompleteButton { habit, now, habitLog, timeZone } =
 
 habitHeader : Context -> Html Msg
 habitHeader context =
-    div [ class "h-4" ]
-        [ completedTodayText context
-        ]
-
-
-completedTodayText : Context -> Html Msg
-completedTodayText { habit, now, habitLog, timeZone } =
-    if completedToday timeZone habit now habitLog then
-        text "Come back tomorrow!"
-
-    else
-        text " "
+    div [ class "h-4" ] [ createHabitButton ]

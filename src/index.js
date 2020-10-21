@@ -33,12 +33,11 @@ const fetchHabitDataFromLocalStorage = () => {
   };
 };
 
-const saveHabitLocally = (habit) => {
+const saveHabit = (habit) => {
   localStorage.setItem(habitKeyV2, JSON.stringify(habit));
 };
 
-const saveHabitLogLocally = (habitLog) => {
-  console.log("saving Habit");
+const saveHabitLog = (habitLog) => {
   localStorage.setItem(habitLogKeyV2, JSON.stringify(habitLog));
 };
 
@@ -50,10 +49,14 @@ const app = Elm.Main.init({
   flags: localHabitData,
 });
 
-app.ports.saveHabitLocally.subscribe((habit) => {
-  saveHabitLocally(habit);
+app.ports.createHabitLocally.subscribe((habit) => {
+  saveHabit(habit);
+});
+
+app.ports.updateHabitLocally.subscribe((habit) => {
+  saveHabit(habit);
 });
 
 app.ports.saveHabitLogLocally.subscribe((habitLog) => {
-  saveHabitLogLocally(habitLog);
+  saveHabitLog(habitLog);
 });

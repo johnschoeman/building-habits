@@ -5,7 +5,7 @@ import Habit exposing (Habit, HabitCompletionEvent, HabitLog, decodeHabit, decod
 import Html exposing (Html, button, div, h1, text, textarea)
 import Html.Attributes exposing (class, classList, id, style, value)
 import Html.Events exposing (onClick, onInput)
-import Route exposing (Route(..))
+import Route exposing (Navigation, Route(..))
 import Screen.ViewHelpers exposing (fixedContent)
 import Styles.Buttons as Buttons
 import Styles.Colors as Colors
@@ -14,25 +14,31 @@ import Time exposing (Month(..), Posix)
 
 
 type Msg
-    = LogChangeScreen Route
+    = HandleOnTapClose
     | NoOp
 
 
-update : Msg -> Context -> ( Context, Cmd Msg )
-update msg context =
-    case msg of
-        LogChangeScreen route ->
-            let
-                oldNav =
-                    context.navigation
+type alias NextState =
+    { nextCtx : Context
+    , nextNav : Navigation
+    , nextSubMsg : Cmd Msg
+    }
 
-                nextNav =
-                    { oldNav | currentRoute = route }
-            in
-            ( { context | navigation = nextNav }, Cmd.none )
+
+update : Msg -> Context -> Navigation -> NextState
+update msg ctx nav =
+    case msg of
+        HandleOnTapClose ->
+            { nextCtx = ctx
+            , nextNav = { nav | currentRoute = Route.Dashboard }
+            , nextSubMsg = Cmd.none
+            }
 
         NoOp ->
-            ( context, Cmd.none )
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextSubMsg = Cmd.none
+            }
 
 
 view : Context -> Html Msg
@@ -47,7 +53,7 @@ logScreenHeader : Html Msg
 logScreenHeader =
     div [ class "flex flex-row justify-between items-center mb-4" ]
         [ div [ class Typography.header1 ] [ text "Habit Log" ]
-        , div [ class Buttons.close, onClick <| LogChangeScreen Dashboard ] [ text "X" ]
+        , div [ class Buttons.close, onClick HandleOnTapClose ] [ text "X" ]
         ]
 
 
