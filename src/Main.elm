@@ -76,7 +76,8 @@ buildInitialContext { flags } { now, zone, viewport } =
         habit =
             decodeHabit flags.habit
     in
-    { habit = habit
+    { navigation = { currentRoute = Route.Dashboard }
+    , habit = habit
     , habitLog = habitLog
     , now = now
     , timeZone = zone
@@ -129,36 +130,57 @@ handleScreenMsg screen context msg =
     case ( screen, msg ) of
         ( Dashboard, HandleDashboardMsg subMsg ) ->
             let
-                ( nextRoute, nextContext, nextSubMsg ) =
+                ( nextContext, nextSubMsg ) =
                     DashboardScreen.update subMsg context
             in
-            ( App (fromRoute nextRoute nextContext) nextContext
-            , Cmd.map HandleDashboardMsg nextSubMsg
-            )
+            case nextContext.navigation.currentRoute of
+                Route.Dashboard ->
+                    ( App Dashboard nextContext
+                    , Cmd.map HandleDashboardMsg nextSubMsg
+                    )
+
+                nextRoute ->
+                    ( App (fromRoute nextRoute nextContext) nextContext
+                    , Cmd.map HandleDashboardMsg nextSubMsg
+                    )
+
+        ( Analytics, HandleAnalyticsMsg subMsg ) ->
+            let
+                ( nextContext, nextSubMsg ) =
+                    AnalyticsScreen.update subMsg context
+            in
+            case nextContext.navigation.currentRoute of
+                Route.Analytics ->
+                    ( App Analytics nextContext
+                    , Cmd.map HandleAnalyticsMsg nextSubMsg
+                    )
+
+                nextRoute ->
+                    ( App (fromRoute nextRoute nextContext) nextContext
+                    , Cmd.map HandleAnalyticsMsg nextSubMsg
+                    )
+
+        ( EditHabit subModel, HandleEditHabitsMsg subMsg ) ->
+            let
+                ( nextContext, nextSubModel, nextSubMsg ) =
+                    EditHabitScreen.update subModel subMsg context
+            in
+            case nextContext.navigation.currentRoute of
+                Route.EditHabit ->
+                    ( App (EditHabit nextSubModel) nextContext
+                    , Cmd.map HandleEditHabitsMsg nextSubMsg
+                    )
+
+                nextRoute ->
+                    ( App (fromRoute nextRoute nextContext) nextContext
+                    , Cmd.map HandleEditHabitsMsg nextSubMsg
+                    )
 
         ( Dashboard, _ ) ->
             ( App Dashboard context, Cmd.none )
 
-        ( Analytics, HandleAnalyticsMsg subMsg ) ->
-            let
-                ( nextRoute, nextContext, nextSubMsg ) =
-                    AnalyticsScreen.update subMsg context
-            in
-            ( App (fromRoute nextRoute nextContext) nextContext
-            , Cmd.map HandleAnalyticsMsg nextSubMsg
-            )
-
         ( Analytics, _ ) ->
             ( App Analytics context, Cmd.none )
-
-        ( EditHabit subModel, HandleEditHabitsMsg subMsg ) ->
-            let
-                ( nextRoute, nextContext, nextSubMsg ) =
-                    EditHabitScreen.update subModel subMsg context
-            in
-            ( App (fromRoute nextRoute nextContext) nextContext
-            , Cmd.map HandleEditHabitsMsg nextSubMsg
-            )
 
         ( EditHabit subModel, _ ) ->
             ( App (EditHabit subModel) context, Cmd.none )
@@ -191,13 +213,8 @@ view model =
 
         App screen context ->
             { title = "Building Habits"
-            , body = [ appContent screen context ]
+            , body = [ screenContent screen context ]
             }
-
-
-appContent : Screen -> Context -> Html Msg
-appContent screen context =
-    screenContent screen context
 
 
 screenContent : Screen -> Context -> Html Msg

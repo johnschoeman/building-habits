@@ -13,44 +13,52 @@ import Styles.Typography as Typography
 
 type alias Model =
     { habitTitle : String
+    , errorMsg : String
     }
 
 
 init : Context -> Model
 init context =
-    { habitTitle = context.habit.title }
+    { habitTitle = context.habit.title, errorMsg = "" }
 
 
 type Msg
-    = EditHabitChangeRoute Route
-    | UpdateHabitTitle String
-    | SubmitSaveHabit
+    = UpdateFormInput String
+    | SaveHabit
 
 
-update : Model -> Msg -> Context -> ( Route, Context, Cmd Msg )
+
+-- ( Route.EditHabit, context, Task.attempt (\_ -> HabitNoOp) (Browser.Dom.focus "edit-habit-input") )
+
+
+update : Model -> Msg -> Context -> ( Context, Model, Cmd Msg )
 update model msg context =
     case msg of
-        EditHabitChangeRoute route ->
-            ( route, context, Cmd.none )
+        UpdateFormInput habit ->
+            ( context, { model | habitTitle = habit, errorMsg = "" }, Cmd.none )
 
-        UpdateHabitTitle habitTitle ->
+        SaveHabit ->
             let
+                oldNav =
+                    context.navigation
+
+                nextNav =
+                    { oldNav | currentRoute = Route.Dashboard }
+
                 oldHabit =
                     context.habit
 
                 nextHabit =
-                    { oldHabit | title = habitTitle }
+                    { oldHabit | title = model.habitTitle }
             in
-            ( EditHabit
-            , { context | habit = nextHabit }
-            , saveHabit nextHabit
-            )
+            if Habit.isValid nextHabit then
+                ( { context | habit = nextHabit, navigation = nextNav }
+                , model
+                , saveHabit nextHabit
+                )
 
-        SubmitSaveHabit ->
-            ( Dashboard
-            , context
-            , saveHabit context.habit
-            )
+            else
+                ( context, { model | errorMsg = "Invalid Habit" }, Cmd.none )
 
 
 port saveHabitLocally : Encode.Value -> Cmd msg
@@ -68,19 +76,20 @@ view model context =
             [ div [ class "flex justify-between pb-4" ]
                 [ button
                     [ class "self-start w-min-c h-min-c py-3 px-4"
-                    , onClick <| UpdateHabitTitle ""
+                    , onClick <| UpdateFormInput ""
                     ]
                     [ div [ class "text-gray-400 font-bold" ] [ text "Clear" ] ]
+                , text model.errorMsg
                 , button
                     [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
-                    , onClick <| SubmitSaveHabit
+                    , onClick <| SaveHabit
                     ]
                     [ div [ class "text-white font-bold" ] [ text "Done" ]
                     ]
                 ]
             , textarea
                 [ value model.habitTitle
-                , onInput UpdateHabitTitle
+                , onInput UpdateFormInput
                 , classList [ ( Typography.header1, True ), ( "resize-none w-full h-full", True ) ]
                 , id "edit-habit-input"
                 ]

@@ -37,27 +37,28 @@ totalDays =
     21
 
 
-update : Msg -> Context -> ( Route.Route, Context, Cmd Msg )
+update : Msg -> Context -> ( Context, Cmd Msg )
 update msg context =
     case msg of
         DashboardChangeRoute route ->
-            case route of
-                Route.EditHabit ->
-                    ( Route.EditHabit, context, Task.attempt (\_ -> HabitNoOp) (Browser.Dom.focus "edit-habit-input") )
+            let
+                oldNav =
+                    context.navigation
 
-                _ ->
-                    ( route, context, Cmd.none )
+                nextNav =
+                    { oldNav | currentRoute = route }
+            in
+            ( { context | navigation = nextNav }, Cmd.none )
 
         CompleteHabit ->
-            ( Route.Dashboard, context, Task.perform LogHabit Time.now )
+            ( context, Task.perform LogHabit Time.now )
 
         LogHabit now ->
             let
                 nextLog =
                     addEntry context.habit now context.habitLog
             in
-            ( Route.Dashboard
-            , { context | habitLog = nextLog }
+            ( { context | habitLog = nextLog }
             , saveHabitLog nextLog
             )
 
@@ -66,13 +67,12 @@ update msg context =
                 nextLog =
                     undoLastHabit context.habit context.habitLog
             in
-            ( Route.Dashboard
-            , { context | habitLog = nextLog }
+            ( { context | habitLog = nextLog }
             , saveHabitLog nextLog
             )
 
         HabitNoOp ->
-            ( Route.Dashboard, context, Cmd.none )
+            ( context, Cmd.none )
 
 
 port saveHabitLogLocally : Encode.Value -> Cmd msg
@@ -85,7 +85,7 @@ saveHabitLog habitLog =
 
 view : Context -> Html Msg
 view context =
-    if Habit.valid context.habit then
+    if Habit.isValid context.habit then
         fixedContent
             [ habitInfo context
             , progressBar context

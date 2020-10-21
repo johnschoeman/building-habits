@@ -18,14 +18,21 @@ type Msg
     | NoOp
 
 
-update : Msg -> Context -> ( Route, Context, Cmd Msg )
+update : Msg -> Context -> ( Context, Cmd Msg )
 update msg context =
     case msg of
         LogChangeScreen route ->
-            ( route, context, Cmd.none )
+            let
+                oldNav =
+                    context.navigation
+
+                nextNav =
+                    { oldNav | currentRoute = route }
+            in
+            ( { context | navigation = nextNav }, Cmd.none )
 
         NoOp ->
-            ( Analytics, context, Cmd.none )
+            ( context, Cmd.none )
 
 
 view : Context -> Html Msg

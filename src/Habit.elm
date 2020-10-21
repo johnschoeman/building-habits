@@ -28,8 +28,8 @@ type alias HabitLog =
     List HabitCompletionEvent
 
 
-valid : Habit -> Bool
-valid habit =
+isValid : Habit -> Bool
+isValid habit =
     String.length habit.title > 0
 
 
