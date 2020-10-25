@@ -31,6 +31,10 @@ textarea, input {
   -webkit-appearance: none;
 }
 
+[type="checkbox"] {
+  -webkit-appearance: checkbox;
+}
+
 .break-anywhere {
   overflow-wrap: anywhere;
 }

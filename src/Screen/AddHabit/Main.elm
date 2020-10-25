@@ -2,28 +2,190 @@ port module Screen.AddHabit.Main exposing (Model, Msg, init, update, view)
 
 import Context exposing (Context)
 import Habit exposing (Habit, HabitLog, encodeHabit)
-import Html exposing (Html, button, div, h1, main_, text, textarea)
-import Html.Attributes exposing (class, classList, id, placeholder, value)
+import Html exposing (Html, button, div, h1, input, label, main_, option, select, text)
+import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Encode as Encode
 import Route exposing (Navigation, Route(..))
 import Screen.ViewHelpers exposing (fixedContent)
+import Styles.Forms as Forms
 import Styles.Typography as Typography
 
 
+
+---- MODEL ----
+
+
+type DurationUnit
+    = Second
+    | Minute
+    | Hour
+
+
+showDurationUnit : DurationUnit -> String
+showDurationUnit unit =
+    case unit of
+        Second ->
+            "second(s)"
+
+        Minute ->
+            "minute(s)"
+
+        Hour ->
+            "hour(s)"
+
+
+stringToDurationUnit : String -> DurationUnit
+stringToDurationUnit str =
+    case str of
+        "second(s)" ->
+            Second
+
+        "minute(s))" ->
+            Minute
+
+        "hours(s)" ->
+            Hour
+
+        _ ->
+            Minute
+
+
+type TimePreposition
+    = Before
+    | TimeAt
+    | After
+
+
+showTimePreposition : TimePreposition -> String
+showTimePreposition preposition =
+    case preposition of
+        Before ->
+            "before"
+
+        TimeAt ->
+            "at"
+
+        After ->
+            "after"
+
+
+stringToTimePreposition : String -> TimePreposition
+stringToTimePreposition str =
+    case str of
+        "before" ->
+            Before
+
+        "at" ->
+            TimeAt
+
+        "after" ->
+            After
+
+        _ ->
+            TimeAt
+
+
+type PlacePreposition
+    = In
+    | PlaceAt
+    | On
+
+
+showPlacePreposition : PlacePreposition -> String
+showPlacePreposition preposition =
+    case preposition of
+        In ->
+            "in"
+
+        PlaceAt ->
+            "at"
+
+        On ->
+            "on"
+
+
+stringToPlacePreposition : String -> PlacePreposition
+stringToPlacePreposition str =
+    case str of
+        "in" ->
+            In
+
+        "at" ->
+            PlaceAt
+
+        "on" ->
+            On
+
+        _ ->
+            PlaceAt
+
+
 type alias Model =
-    { habitTitle : String
-    , errorMsg : String
+    { errorMsg : String
+    , habitText : String
+    , includeDuration : Bool
+    , durationText : String
+    , durationUnit : DurationUnit
+    , timePreposition : TimePreposition
+    , timeText : String
+    , placePreposition : PlacePreposition
+    , placeText : String
     }
+
+
+modelToHabit : Model -> Habit
+modelToHabit model =
+    let
+        habitTitle =
+            String.join " "
+                [ "I will"
+                , model.habitText
+                , "for"
+                , model.durationText
+                , showDurationUnit model.durationUnit
+                , showTimePreposition model.timePreposition
+                , model.timeText
+                , showPlacePreposition model.placePreposition
+                , model.placeText
+                ]
+    in
+    { id = slugify habitTitle, title = habitTitle }
+
+
+slugify : String -> String
+slugify string =
+    String.replace " " "-" string
+        |> String.toLower
 
 
 init : Context -> Model
 init context =
-    { habitTitle = "", errorMsg = "" }
+    { errorMsg = ""
+    , habitText = ""
+    , includeDuration = True
+    , durationText = ""
+    , durationUnit = Second
+    , timePreposition = Before
+    , timeText = ""
+    , placePreposition = In
+    , placeText = ""
+    }
+
+
+
+---- UPDATE ----
 
 
 type Msg
-    = UpdateFormInput String
+    = UpdateHabitText String
+    | ToggleShowDuration
+    | UpdateDurationText String
+    | UpdateDurationUnit DurationUnit
+    | UpdateTimePreposition TimePreposition
+    | UpdateTimeText String
+    | UpdatePlacePreposition PlacePreposition
+    | UpdatePlaceText String
     | SaveHabit
     | HandleOnTapCancel
 
@@ -47,17 +209,66 @@ update model msg ctx nav =
             , nextSubMsg = Cmd.none
             }
 
-        UpdateFormInput habit ->
+        UpdateHabitText text ->
             { nextCtx = ctx
             , nextNav = nav
-            , nextModel = { model | habitTitle = habit, errorMsg = "" }
+            , nextModel = { model | habitText = text, errorMsg = "" }
+            , nextSubMsg = Cmd.none
+            }
+
+        ToggleShowDuration ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | includeDuration = not model.includeDuration }
+            , nextSubMsg = Cmd.none
+            }
+
+        UpdateDurationText text ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | durationText = text }
+            , nextSubMsg = Cmd.none
+            }
+
+        UpdateDurationUnit unit ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | durationUnit = unit }
+            , nextSubMsg = Cmd.none
+            }
+
+        UpdateTimePreposition preposition ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | timePreposition = preposition }
+            , nextSubMsg = Cmd.none
+            }
+
+        UpdateTimeText text ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | timeText = text }
+            , nextSubMsg = Cmd.none
+            }
+
+        UpdatePlacePreposition preposition ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | placePreposition = preposition }
+            , nextSubMsg = Cmd.none
+            }
+
+        UpdatePlaceText text ->
+            { nextCtx = ctx
+            , nextNav = nav
+            , nextModel = { model | placeText = text }
             , nextSubMsg = Cmd.none
             }
 
         SaveHabit ->
             let
                 nextHabit =
-                    { id = slugify model.habitTitle, title = model.habitTitle }
+                    modelToHabit model
             in
             if Habit.isValid nextHabit then
                 { nextCtx = { ctx | habit = nextHabit }
@@ -74,10 +285,8 @@ update model msg ctx nav =
                 }
 
 
-slugify : String -> String
-slugify string =
-    String.replace " " "" string
-        |> String.toLower
+
+---- PORTS ----
 
 
 createHabit : Habit -> Cmd Msg
@@ -88,32 +297,19 @@ createHabit habit =
 port createHabitLocally : Encode.Value -> Cmd msg
 
 
+
+---- VIEW ----
+
+
 view : Model -> Context -> Html Msg
 view model context =
     fixedContent
         [ div [ class "flex flex-col h-full" ]
             [ div [ class "pb-2" ] [ header ]
             , div [ class "h-8" ] [ errorMsg model.errorMsg ]
-            , div [ class "h-56" ]
-                [ textarea
-                    [ value model.habitTitle
-                    , placeholder placeholderText
-                    , onInput UpdateFormInput
-                    , classList
-                        [ ( Typography.textInput, True )
-                        , ( "rounded border border-gray-400 p-2 resize-none w-full max-h-full min-h-full", True )
-                        ]
-                    , id "edit-habit-input"
-                    ]
-                    []
-                ]
+            , habitForm model
             ]
         ]
-
-
-placeholderText : String
-placeholderText =
-    "I will meditate for 10 seconds before bed in my living room..."
 
 
 header : Html Msg
@@ -137,3 +333,162 @@ header =
 errorMsg : String -> Html msg
 errorMsg str =
     div [ class <| Typography.error ++ " w-full text-center" ] [ text str ]
+
+
+habitForm : Model -> Html Msg
+habitForm model =
+    div [ class "flex flex-col justify-between h-48" ]
+        [ habitInput model
+        , durationForm model
+        , timeForm model
+        , placeForm model
+        ]
+
+
+habitInput : Model -> Html Msg
+habitInput model =
+    div [ class "flex flex-row" ]
+        [ div [ class "w-12 mr-4" ] [ text "I will" ]
+        , input
+            [ value model.habitText
+            , class <| Forms.input ++ " w-full"
+            , placeholder "habit"
+            , onInput UpdateHabitText
+            ]
+            []
+        ]
+
+
+durationForm : Model -> Html Msg
+durationForm model =
+    div
+        [ classList
+            [ ( "flex flex-row items-baseline", True )
+            , ( "text-gray-600 line-through", not model.includeDuration )
+            ]
+        ]
+        [ div [ class "mr-4" ] [ text "for" ]
+        , div [ class "mr-4" ] [ durationInput model ]
+        , div [] [ durationUnitSelect model ]
+        , div [ class "w-full h-full flex flex-row items-center justify-end" ] [ durationCheckbox model ]
+        ]
+
+
+durationInput : Model -> Html Msg
+durationInput model =
+    input
+        [ value model.durationText
+        , placeholder "duration"
+        , class <| Forms.input ++ " w-24"
+        , onInput UpdateDurationText
+        , disabled <| not model.includeDuration
+        ]
+        []
+
+
+durationUnitSelect : Model -> Html Msg
+durationUnitSelect model =
+    select
+        [ class Forms.select
+        , value <| showDurationUnit model.durationUnit
+        , onInput (\str -> UpdateDurationUnit <| stringToDurationUnit str)
+        , disabled <| not model.includeDuration
+        ]
+        [ durationUnitOption Second
+        , durationUnitOption Minute
+        , durationUnitOption Hour
+        ]
+
+
+durationUnitOption : DurationUnit -> Html Msg
+durationUnitOption duration =
+    option [ value <| showDurationUnit duration ] [ text <| showDurationUnit duration ]
+
+
+durationCheckbox : Model -> Html Msg
+durationCheckbox model =
+    let
+        checkboxIdentifier =
+            "include-duration"
+    in
+    input
+        [ type_ "checkbox"
+        , class "border h-6 w-6 text-gray-800"
+        , checked model.includeDuration
+        , onClick ToggleShowDuration
+        ]
+        []
+
+
+timeForm : Model -> Html Msg
+timeForm model =
+    div [ class "flex flex-row items-baseline" ]
+        [ timeSelect model
+        , timeInput model
+        ]
+
+
+timeSelect : Model -> Html Msg
+timeSelect model =
+    select
+        [ class <| Forms.select ++ " w-24 mr-4"
+        , value <| showTimePreposition model.timePreposition
+        , onInput (\str -> UpdateTimePreposition <| stringToTimePreposition str)
+        ]
+        [ timeOption Before
+        , timeOption TimeAt
+        , timeOption After
+        ]
+
+
+timeOption : TimePreposition -> Html Msg
+timeOption preposition =
+    option [ value <| showTimePreposition preposition ] [ text <| showTimePreposition preposition ]
+
+
+timeInput : Model -> Html Msg
+timeInput model =
+    input
+        [ value model.timeText
+        , class Forms.input
+        , placeholder "time of day"
+        , onInput UpdateTimeText
+        ]
+        []
+
+
+placeForm : Model -> Html Msg
+placeForm model =
+    div [ class "flex flex-row items-baseline" ]
+        [ placeSelect model
+        , placeInput model
+        ]
+
+
+placeSelect : Model -> Html Msg
+placeSelect model =
+    select
+        [ class <| Forms.select ++ " w-24 mr-4"
+        , value <| showPlacePreposition model.placePreposition
+        , onInput (\str -> UpdatePlacePreposition <| stringToPlacePreposition str)
+        ]
+        [ placeOption In
+        , placeOption PlaceAt
+        , placeOption On
+        ]
+
+
+placeInput : Model -> Html Msg
+placeInput model =
+    input
+        [ value model.placeText
+        , class Forms.input
+        , placeholder "location"
+        , onInput UpdatePlaceText
+        ]
+        []
+
+
+placeOption : PlacePreposition -> Html Msg
+placeOption preposition =
+    option [ value <| showPlacePreposition preposition ] [ text <| showPlacePreposition preposition ]
