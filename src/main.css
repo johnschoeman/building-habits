@@ -35,6 +35,10 @@ textarea, input {
   -webkit-appearance: checkbox;
 }
 
+::placeholder {
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 .break-anywhere {
   overflow-wrap: anywhere;
 }

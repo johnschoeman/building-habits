@@ -1,9 +1,11 @@
 module Styles.Forms exposing (..)
 
+import Styles.Typography as Typography
+
 
 input : String
 input =
-    "text-center px-2 border-b"
+    Typography.textInput ++ " text-center px-2 border-b border-gray-800"
 
 
 select : String

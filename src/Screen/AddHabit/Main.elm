@@ -3,7 +3,7 @@ port module Screen.AddHabit.Main exposing (Model, Msg, init, update, view)
 import Context exposing (Context)
 import Habit exposing (Habit, HabitLog, encodeHabit)
 import Html exposing (Html, button, div, h1, input, label, main_, option, select, text)
-import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, type_, value)
+import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, id, name, placeholder, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Encode as Encode
 import Route exposing (Navigation, Route(..))
@@ -44,7 +44,7 @@ stringToDurationUnit str =
         "minute(s))" ->
             Minute
 
-        "hours(s)" ->
+        "hour(s)" ->
             Hour
 
         _ ->
@@ -139,18 +139,59 @@ modelToHabit model =
     let
         habitTitle =
             String.join " "
-                [ "I will"
-                , model.habitText
-                , "for"
-                , model.durationText
-                , showDurationUnit model.durationUnit
-                , showTimePreposition model.timePreposition
-                , model.timeText
-                , showPlacePreposition model.placePreposition
-                , model.placeText
+                [ habitPart model
+                , durationPart model
+                , timePart model
+                , placePart model
                 ]
+                |> String.trim
     in
     { id = slugify habitTitle, title = habitTitle }
+
+
+habitPart : Model -> String
+habitPart model =
+    String.join " "
+        [ "I will"
+        , model.habitText
+        ]
+
+
+durationPart : Model -> String
+durationPart model =
+    if model.includeDuration && String.length model.durationText > 0 then
+        String.join " "
+            [ "for"
+            , model.durationText
+            , showDurationUnit model.durationUnit
+            ]
+
+    else
+        ""
+
+
+timePart : Model -> String
+timePart model =
+    if String.length model.timeText > 0 then
+        String.join " "
+            [ showTimePreposition model.timePreposition
+            , model.timeText
+            ]
+
+    else
+        ""
+
+
+placePart : Model -> String
+placePart model =
+    if String.length model.placeText > 0 then
+        String.join " "
+            [ showPlacePreposition model.placePreposition
+            , model.placeText
+            ]
+
+    else
+        ""
 
 
 slugify : String -> String
@@ -270,7 +311,7 @@ update model msg ctx nav =
                 nextHabit =
                     modelToHabit model
             in
-            if Habit.isValid nextHabit then
+            if String.length model.habitText > 0 then
                 { nextCtx = { ctx | habit = nextHabit }
                 , nextNav = { nav | currentRoute = Route.Dashboard }
                 , nextModel = model
@@ -280,7 +321,7 @@ update model msg ctx nav =
             else
                 { nextCtx = ctx
                 , nextNav = nav
-                , nextModel = { model | errorMsg = "Invalid Habit" }
+                , nextModel = { model | errorMsg = "habit required" }
                 , nextSubMsg = Cmd.none
                 }
 
@@ -320,7 +361,7 @@ header =
             , onClick HandleOnTapCancel
             ]
             [ div [ class "text-red-400 font-bold" ] [ text "Cancel" ] ]
-        , div [ class Typography.header1 ] [ text "Build Habit" ]
+        , div [ class Typography.header2 ] [ text "Build Habit" ]
         , button
             [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
             , onClick <| SaveHabit
@@ -337,7 +378,7 @@ errorMsg str =
 
 habitForm : Model -> Html Msg
 habitForm model =
-    div [ class "flex flex-col justify-between h-48" ]
+    div [ class "flex flex-col justify-between h-56" ]
         [ habitInput model
         , durationForm model
         , timeForm model
@@ -348,11 +389,12 @@ habitForm model =
 habitInput : Model -> Html Msg
 habitInput model =
     div [ class "flex flex-row" ]
-        [ div [ class "w-12 mr-4" ] [ text "I will" ]
+        [ div [ class <| Typography.body1 ++ " mr-4" ] [ text "I will" ]
         , input
             [ value model.habitText
-            , class <| Forms.input ++ " w-full"
+            , class <| Forms.input ++ " flex-grow"
             , placeholder "habit"
+            , attribute "autocapitalize" "none"
             , onInput UpdateHabitText
             ]
             []
@@ -367,7 +409,7 @@ durationForm model =
             , ( "text-gray-600 line-through", not model.includeDuration )
             ]
         ]
-        [ div [ class "mr-4" ] [ text "for" ]
+        [ div [ class <| Typography.body1 ++ " mr-4" ] [ text "for" ]
         , div [ class "mr-4" ] [ durationInput model ]
         , div [] [ durationUnitSelect model ]
         , div [ class "w-full h-full flex flex-row items-center justify-end" ] [ durationCheckbox model ]
@@ -379,8 +421,10 @@ durationInput model =
     input
         [ value model.durationText
         , placeholder "duration"
-        , class <| Forms.input ++ " w-24"
+        , class <| Forms.input ++ " w-32"
+        , type_ "number"
         , onInput UpdateDurationText
+        , attribute "autocapitalize" "none"
         , disabled <| not model.includeDuration
         ]
         []
@@ -450,8 +494,9 @@ timeInput : Model -> Html Msg
 timeInput model =
     input
         [ value model.timeText
-        , class Forms.input
+        , class <| Forms.input
         , placeholder "time of day"
+        , attribute "autocapitalize" "none"
         , onInput UpdateTimeText
         ]
         []
@@ -484,6 +529,7 @@ placeInput model =
         [ value model.placeText
         , class Forms.input
         , placeholder "location"
+        , attribute "autocapitalize" "none"
         , onInput UpdatePlaceText
         ]
         []
