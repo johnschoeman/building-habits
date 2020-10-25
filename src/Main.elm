@@ -236,10 +236,10 @@ screenContent screen context =
             Html.map HandleAnalyticsMsg <| AnalyticsScreen.view context
 
         AddHabit subModel ->
-            Html.map HandleAddHabitMsg <| AddHabitScreen.view subModel context
+            Html.map HandleAddHabitMsg <| AddHabitScreen.view subModel
 
         EditHabit subModel ->
-            Html.map HandleEditHabitsMsg <| EditHabitScreen.view subModel context
+            Html.map HandleEditHabitsMsg <| EditHabitScreen.view subModel
 
 
 

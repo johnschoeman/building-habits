@@ -115,12 +115,16 @@ view context =
 
 createHabitButton : Html Msg
 createHabitButton =
-    div [ class "flex justify-center items-center h-full" ]
+    div [ class "flex justify-center items-center h-full mt-8" ]
         [ button
-            [ class <| "text-gray-800 font-bold px-6 py-4 underline"
+            [ class <| "text-purple-700 font-bold px-4 py-2 border-2 border-purple-700 rounded-md"
             , onClick HandleOnTapCreateHabit
             ]
-            [ text "Start new habit" ]
+            [ div [ class "flex flex-row" ]
+                [ Icons.plus Colors.purple 24
+                , div [ class "ml-2" ] [ text "Set habit" ]
+                ]
+            ]
         ]
 
 
@@ -154,7 +158,7 @@ progressBar { habit, habitLog, viewport } =
             (String.fromInt <| round progressBarHeight) ++ "px"
     in
     div
-        [ class "fixed bottom-0 left-0 w-full z-0 bg-purple-100 transition-height duration-1000 ease-in-out"
+        [ class "fixed bottom-0 left-0 w-full z-0 bg-purple-100 transition-height duration-1000 ease-in-out border-t border-purple-200"
         , style "height" progressBarHeightString
         ]
         []

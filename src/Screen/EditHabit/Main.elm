@@ -5,10 +5,12 @@ import Habit exposing (Habit, HabitLog, encodeHabit)
 import Html exposing (Html, button, div, h1, main_, text, textarea)
 import Html.Attributes exposing (class, classList, id, value)
 import Html.Events exposing (onClick, onInput)
+import Icons
 import Json.Encode as Encode
 import Route exposing (Navigation, Route(..))
 import Screen.ViewHelpers exposing (fixedContent)
 import Styles.Buttons as Buttons
+import Styles.Colors as Colors
 import Styles.Typography as Typography
 
 
@@ -26,6 +28,7 @@ init context =
 type Msg
     = UpdateFormInput String
     | SaveHabit
+    | HandleOnTapCancel
 
 
 type alias NextState =
@@ -68,6 +71,14 @@ update model msg ctx nav =
                 , nextSubMsg = Cmd.none
                 }
 
+        HandleOnTapCancel ->
+            { nextCtx = ctx
+            , nextNav =
+                { nav | currentRoute = Route.Dashboard }
+            , nextModel = model
+            , nextSubMsg = Cmd.none
+            }
+
 
 updateHabit : Habit -> Cmd Msg
 updateHabit habit =
@@ -77,37 +88,46 @@ updateHabit habit =
 port updateHabitLocally : Encode.Value -> Cmd msg
 
 
-view : Model -> Context -> Html Msg
-view model context =
+view : Model -> Html Msg
+view model =
     fixedContent
         [ div [ class "flex flex-col h-full" ]
-            [ div [ class "pb-2" ] [ header ]
-            , div [ class "h-8" ] [ errorMsg model.errorMsg ]
-            , div [ class "h-56" ]
-                [ textarea
-                    [ value model.habitTitle
-                    , onInput UpdateFormInput
-                    , classList
-                        [ ( Typography.textInput, True )
-                        , ( "rounded border p-2 resize-none w-full h-full", True )
-                        ]
-                    , id "edit-habit-input"
-                    ]
-                    []
-                ]
+            [ header model
+            , habitForm model
             ]
         ]
 
 
-header : Html Msg
-header =
-    div [ class "w-full flex justify-between items-center" ]
-        [ div [ class <| Typography.header1 ++ " w-full text-center" ] [ text "Edit Habit" ]
+habitForm : Model -> Html Msg
+habitForm model =
+    div [ class "h-56" ]
+        [ textarea
+            [ value model.habitTitle
+            , onInput UpdateFormInput
+            , classList
+                [ ( Typography.textInput, True )
+                , ( "rounded border p-4 resize-none w-full h-full", True )
+                ]
+            , id "edit-habit-input"
+            ]
+            []
+        ]
+
+
+header : Model -> Html Msg
+header model =
+    div [ class "w-full flex justify-between items-center mb-4 mt-2" ]
+        [ button
+            [ class "self-start w-min-c h-min-c py-3"
+            , onClick HandleOnTapCancel
+            ]
+            [ div [ class "text-red-400 font-bold" ] [ Icons.x Colors.black 30 ] ]
+        , div [ class "h-8" ] [ errorMsg model.errorMsg ]
         , button
-            [ class <| "self-end " ++ Buttons.roundedPurple
+            [ class "self-end w-min-c h-min-c py-3"
             , onClick <| SaveHabit
             ]
-            [ div [ class "text-white font-bold" ] [ text "Done" ]
+            [ Icons.check Colors.purple 30
             ]
         ]
 
