@@ -13,6 +13,16 @@ check color size =
         ]
 
 
+plusCircle : String -> Int -> Html msg
+plusCircle color size =
+    svgFeatherIcon color
+        size
+        [ Svg.circle [ cx "12", cy "12", r "10" ] []
+        , Svg.line [ x1 "12", y1 "8", x2 "12", y2 "16" ] []
+        , Svg.line [ x1 "8", y1 "12", x2 "16", y2 "12" ] []
+        ]
+
+
 save : String -> Int -> Html msg
 save color size =
     svgFeatherIcon color

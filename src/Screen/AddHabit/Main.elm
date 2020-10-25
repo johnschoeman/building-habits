@@ -265,8 +265,8 @@ port createHabitLocally : Encode.Value -> Cmd msg
 ---- VIEW ----
 
 
-view : Model -> Context -> Html Msg
-view model context =
+view : Model -> Html Msg
+view model =
     fixedContent
         [ div [ class "flex flex-col h-full" ]
             [ div [ class "pb-2" ] [ header model ]
@@ -288,7 +288,7 @@ header model =
             [ class "self-end w-min-c h-min-c py-3"
             , onClick <| SaveHabit
             ]
-            [ div [ class "text-purple-700 font-bold" ] [ Icons.check Colors.purple 30 ]
+            [ Icons.check Colors.purple 30
             ]
         ]
 
