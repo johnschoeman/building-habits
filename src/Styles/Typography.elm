@@ -26,6 +26,11 @@ placeholder =
     "font-display font-bold leading-tight text-md text-gray-600"
 
 
+label : String
+label =
+    "font-mono text-sm"
+
+
 error : String
 error =
-    "font-display font-bold text-base text-red-500"
+    "font-mono text-base text-red-500"

@@ -5,50 +5,17 @@ import Habit exposing (Habit, HabitLog, encodeHabit)
 import Html exposing (Html, button, div, h1, input, label, main_, option, select, text)
 import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, id, name, placeholder, type_, value)
 import Html.Events exposing (onClick, onInput)
+import Icons
 import Json.Encode as Encode
 import Route exposing (Navigation, Route(..))
 import Screen.ViewHelpers exposing (fixedContent)
+import Styles.Colors as Colors
 import Styles.Forms as Forms
 import Styles.Typography as Typography
 
 
 
 ---- MODEL ----
-
-
-type DurationUnit
-    = Second
-    | Minute
-    | Hour
-
-
-showDurationUnit : DurationUnit -> String
-showDurationUnit unit =
-    case unit of
-        Second ->
-            "second(s)"
-
-        Minute ->
-            "minute(s)"
-
-        Hour ->
-            "hour(s)"
-
-
-stringToDurationUnit : String -> DurationUnit
-stringToDurationUnit str =
-    case str of
-        "second(s)" ->
-            Second
-
-        "minute(s))" ->
-            Minute
-
-        "hour(s)" ->
-            Hour
-
-        _ ->
-            Minute
 
 
 type TimePreposition
@@ -124,9 +91,6 @@ stringToPlacePreposition str =
 type alias Model =
     { errorMsg : String
     , habitText : String
-    , includeDuration : Bool
-    , durationText : String
-    , durationUnit : DurationUnit
     , timePreposition : TimePreposition
     , timeText : String
     , placePreposition : PlacePreposition
@@ -140,7 +104,6 @@ modelToHabit model =
         habitTitle =
             String.join " "
                 [ habitPart model
-                , durationPart model
                 , timePart model
                 , placePart model
                 ]
@@ -155,19 +118,6 @@ habitPart model =
         [ "I will"
         , model.habitText
         ]
-
-
-durationPart : Model -> String
-durationPart model =
-    if model.includeDuration && String.length model.durationText > 0 then
-        String.join " "
-            [ "for"
-            , model.durationText
-            , showDurationUnit model.durationUnit
-            ]
-
-    else
-        ""
 
 
 timePart : Model -> String
@@ -204,9 +154,6 @@ init : Context -> Model
 init context =
     { errorMsg = ""
     , habitText = ""
-    , includeDuration = True
-    , durationText = ""
-    , durationUnit = Second
     , timePreposition = Before
     , timeText = ""
     , placePreposition = In
@@ -220,9 +167,6 @@ init context =
 
 type Msg
     = UpdateHabitText String
-    | ToggleShowDuration
-    | UpdateDurationText String
-    | UpdateDurationUnit DurationUnit
     | UpdateTimePreposition TimePreposition
     | UpdateTimeText String
     | UpdatePlacePreposition PlacePreposition
@@ -254,27 +198,6 @@ update model msg ctx nav =
             { nextCtx = ctx
             , nextNav = nav
             , nextModel = { model | habitText = text, errorMsg = "" }
-            , nextSubMsg = Cmd.none
-            }
-
-        ToggleShowDuration ->
-            { nextCtx = ctx
-            , nextNav = nav
-            , nextModel = { model | includeDuration = not model.includeDuration }
-            , nextSubMsg = Cmd.none
-            }
-
-        UpdateDurationText text ->
-            { nextCtx = ctx
-            , nextNav = nav
-            , nextModel = { model | durationText = text }
-            , nextSubMsg = Cmd.none
-            }
-
-        UpdateDurationUnit unit ->
-            { nextCtx = ctx
-            , nextNav = nav
-            , nextModel = { model | durationUnit = unit }
             , nextSubMsg = Cmd.none
             }
 
@@ -321,7 +244,7 @@ update model msg ctx nav =
             else
                 { nextCtx = ctx
                 , nextNav = nav
-                , nextModel = { model | errorMsg = "habit required" }
+                , nextModel = { model | errorMsg = "add an activity" }
                 , nextSubMsg = Cmd.none
                 }
 
@@ -346,27 +269,26 @@ view : Model -> Context -> Html Msg
 view model context =
     fixedContent
         [ div [ class "flex flex-col h-full" ]
-            [ div [ class "pb-2" ] [ header ]
-            , div [ class "h-8" ] [ errorMsg model.errorMsg ]
+            [ div [ class "pb-2" ] [ header model ]
             , habitForm model
             ]
         ]
 
 
-header : Html Msg
-header =
-    div [ class "w-full flex justify-between items-center" ]
+header : Model -> Html Msg
+header model =
+    div [ class "w-full flex justify-between items-center mb-8" ]
         [ button
-            [ class "self-start w-min-c h-min-c py-3 px-4"
+            [ class "self-start w-min-c h-min-c py-3"
             , onClick HandleOnTapCancel
             ]
-            [ div [ class "text-red-400 font-bold" ] [ text "Cancel" ] ]
-        , div [ class Typography.header2 ] [ text "Build Habit" ]
+            [ div [ class "text-red-400 font-bold" ] [ Icons.x Colors.black 30 ] ]
+        , div [ class "h-8" ] [ errorMsg model.errorMsg ]
         , button
-            [ class "self-end w-min-c h-min-c py-3 px-4 bg-purple-700 rounded"
+            [ class "self-end w-min-c h-min-c py-3"
             , onClick <| SaveHabit
             ]
-            [ div [ class "text-white font-bold" ] [ text "Done" ]
+            [ div [ class "text-purple-700 font-bold" ] [ Icons.check Colors.purple 30 ]
             ]
         ]
 
@@ -378,9 +300,8 @@ errorMsg str =
 
 habitForm : Model -> Html Msg
 habitForm model =
-    div [ class "flex flex-col justify-between h-56" ]
+    div [ class "flex flex-col justify-between h-64" ]
         [ habitInput model
-        , durationForm model
         , timeForm model
         , placeForm model
         ]
@@ -389,79 +310,24 @@ habitForm model =
 habitInput : Model -> Html Msg
 habitInput model =
     div [ class "flex flex-row" ]
-        [ div [ class <| Typography.body1 ++ " mr-4" ] [ text "I will" ]
-        , input
-            [ value model.habitText
-            , class <| Forms.input ++ " flex-grow"
-            , placeholder "habit"
-            , attribute "autocapitalize" "none"
-            , onInput UpdateHabitText
-            ]
-            []
-        ]
-
-
-durationForm : Model -> Html Msg
-durationForm model =
-    div
-        [ classList
-            [ ( "flex flex-row items-baseline", True )
-            , ( "text-gray-600 line-through", not model.includeDuration )
+        [ div [ class <| Typography.body1 ++ " mr-4" ]
+            [ text "I will" ]
+        , div
+            [ class "flex flex-col flex-grow items-center" ]
+            [ input
+                [ value model.habitText
+                , class <| Forms.input ++ " w-full"
+                , placeholder "put on my running shoes"
+                , attribute "autocapitalize" "none"
+                , onInput UpdateHabitText
+                , id "habit-input"
+                ]
+                []
+            , label [ for "habit-input", class Typography.label ]
+                [ text "activity"
+                ]
             ]
         ]
-        [ div [ class <| Typography.body1 ++ " mr-4" ] [ text "for" ]
-        , div [ class "mr-4" ] [ durationInput model ]
-        , div [] [ durationUnitSelect model ]
-        , div [ class "w-full h-full flex flex-row items-center justify-end" ] [ durationCheckbox model ]
-        ]
-
-
-durationInput : Model -> Html Msg
-durationInput model =
-    input
-        [ value model.durationText
-        , placeholder "duration"
-        , class <| Forms.input ++ " w-32"
-        , type_ "number"
-        , onInput UpdateDurationText
-        , attribute "autocapitalize" "none"
-        , disabled <| not model.includeDuration
-        ]
-        []
-
-
-durationUnitSelect : Model -> Html Msg
-durationUnitSelect model =
-    select
-        [ class Forms.select
-        , value <| showDurationUnit model.durationUnit
-        , onInput (\str -> UpdateDurationUnit <| stringToDurationUnit str)
-        , disabled <| not model.includeDuration
-        ]
-        [ durationUnitOption Second
-        , durationUnitOption Minute
-        , durationUnitOption Hour
-        ]
-
-
-durationUnitOption : DurationUnit -> Html Msg
-durationUnitOption duration =
-    option [ value <| showDurationUnit duration ] [ text <| showDurationUnit duration ]
-
-
-durationCheckbox : Model -> Html Msg
-durationCheckbox model =
-    let
-        checkboxIdentifier =
-            "include-duration"
-    in
-    input
-        [ type_ "checkbox"
-        , class "border h-6 w-6 text-gray-800"
-        , checked model.includeDuration
-        , onClick ToggleShowDuration
-        ]
-        []
 
 
 timeForm : Model -> Html Msg
@@ -492,14 +358,22 @@ timeOption preposition =
 
 timeInput : Model -> Html Msg
 timeInput model =
-    input
-        [ value model.timeText
-        , class <| Forms.input
-        , placeholder "time of day"
-        , attribute "autocapitalize" "none"
-        , onInput UpdateTimeText
+    div
+        [ class "flex flex-col flex-grow items-center"
         ]
-        []
+        [ input
+            [ value model.timeText
+            , class <| Forms.input ++ " w-full"
+            , placeholder "breakfast"
+            , attribute "autocapitalize" "none"
+            , onInput UpdateTimeText
+            , id "time-input"
+            ]
+            []
+        , label [ for "time-input", class Typography.label ]
+            [ text "time of day"
+            ]
+        ]
 
 
 placeForm : Model -> Html Msg
@@ -525,14 +399,22 @@ placeSelect model =
 
 placeInput : Model -> Html Msg
 placeInput model =
-    input
-        [ value model.placeText
-        , class Forms.input
-        , placeholder "location"
-        , attribute "autocapitalize" "none"
-        , onInput UpdatePlaceText
+    div
+        [ class "flex flex-col flex-grow items-center"
         ]
-        []
+        [ input
+            [ value model.placeText
+            , class <| Forms.input ++ " w-full"
+            , placeholder "my living room"
+            , attribute "autocapitalize" "none"
+            , onInput UpdatePlaceText
+            , id "place-input"
+            ]
+            []
+        , label [ for "place-input", class Typography.label ]
+            [ text "location"
+            ]
+        ]
 
 
 placeOption : PlacePreposition -> Html Msg
