@@ -47,3 +47,7 @@ textarea, input {
   width: min-content;
 }
 
+.radio-input input:checked ~ span {
+  background-color: #6b46c1;
+}
+

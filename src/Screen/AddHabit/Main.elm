@@ -2,7 +2,7 @@ port module Screen.AddHabit.Main exposing (Model, Msg, init, update, view)
 
 import Context exposing (Context)
 import Habit exposing (Habit, HabitLog, encodeHabit)
-import Html exposing (Html, button, div, h1, input, label, main_, option, select, text)
+import Html exposing (Html, button, div, h1, input, label, main_, option, select, span, text)
 import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, id, name, placeholder, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
@@ -333,34 +333,46 @@ habitInput model =
 
 timeForm : Model -> Html Msg
 timeForm model =
-    div [ class "flex flex-row items-baseline" ]
-        [ timeSelect model
+    div [ class "flex flex-col items-baseline w-full" ]
+        [ div [ class "w-full" ]
+            [ timeRadio model Before
+            , timeRadio model TimeAt
+            , timeRadio model After
+            ]
         , timeInput model
         ]
 
 
-timeSelect : Model -> Html Msg
-timeSelect model =
-    select
-        [ class <| Forms.select ++ " w-24 mr-4"
-        , value <| showTimePreposition model.timePreposition
-        , onInput (\str -> UpdateTimePreposition <| stringToTimePreposition str)
-        ]
-        [ timeOption Before
-        , timeOption TimeAt
-        , timeOption After
-        ]
+timeRadio : Model -> TimePreposition -> Html Msg
+timeRadio model preposition =
+    let
+        p =
+            showTimePreposition preposition
 
+        c =
+            model.timePreposition == preposition
 
-timeOption : TimePreposition -> Html Msg
-timeOption preposition =
-    option [ value <| showTimePreposition preposition ] [ text <| showTimePreposition preposition ]
+        updateTimePreposition str =
+            UpdateTimePreposition <| stringToTimePreposition str
+    in
+    label [ class "radio-input" ]
+        [ input
+            [ type_ "radio"
+            , value p
+            , name "time"
+            , id p
+            , onInput updateTimePreposition
+            , checked c
+            ]
+            []
+        , span [] [ text p ]
+        ]
 
 
 timeInput : Model -> Html Msg
 timeInput model =
     div
-        [ class "flex flex-col flex-grow items-center"
+        [ class "flex flex-col flex-grow items-center w-full"
         ]
         [ div [ class style.inputContainer ]
             [ input
@@ -381,22 +393,39 @@ timeInput model =
 
 placeForm : Model -> Html Msg
 placeForm model =
-    div [ class "flex flex-row items-baseline" ]
-        [ placeSelect model
+    div [ class "flex flex-col items-baseline w-full" ]
+        [ div [ class "w-full" ]
+            [ placeRadio model In
+            , placeRadio model PlaceAt
+            , placeRadio model On
+            ]
         , placeInput model
         ]
 
 
-placeSelect : Model -> Html Msg
-placeSelect model =
-    select
-        [ class <| Forms.select ++ " w-24 mr-4"
-        , value <| showPlacePreposition model.placePreposition
-        , onInput (\str -> UpdatePlacePreposition <| stringToPlacePreposition str)
-        ]
-        [ placeOption In
-        , placeOption PlaceAt
-        , placeOption On
+placeRadio : Model -> PlacePreposition -> Html Msg
+placeRadio model preposition =
+    let
+        p =
+            showPlacePreposition preposition
+
+        c =
+            model.placePreposition == preposition
+
+        updatePlacePreposition str =
+            UpdatePlacePreposition <| stringToPlacePreposition str
+    in
+    label [ class "radio-input" ]
+        [ input
+            [ type_ "radio"
+            , value p
+            , name "place"
+            , id p
+            , onInput updatePlacePreposition
+            , checked c
+            ]
+            []
+        , span [] [ text p ]
         ]
 
 
@@ -420,11 +449,6 @@ placeInput model =
             [ text "location"
             ]
         ]
-
-
-placeOption : PlacePreposition -> Html Msg
-placeOption preposition =
-    option [ value <| showPlacePreposition preposition ] [ text <| showPlacePreposition preposition ]
 
 
 
