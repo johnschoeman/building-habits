@@ -299,7 +299,7 @@ errorMsg str =
 
 habitForm : Model -> Html Msg
 habitForm model =
-    div [ class "flex flex-col justify-between h-56" ]
+    div [ class style.habitForm ]
         [ habitInput model
         , timeForm model
         , placeForm model
@@ -332,10 +332,7 @@ habitInput model =
 
 timeForm : Model -> Html Msg
 timeForm model =
-    div [ class "flex flex-col items-baseline w-full" ]
-        [ timeRadios model
-        , timeInput model
-        ]
+    prepositionInputForm timeRadios timeInput model
 
 
 timeRadios : Model -> Html Msg
@@ -347,48 +344,26 @@ timeRadios model =
         updateTimePreposition str =
             UpdateTimePreposition <| stringToTimePreposition str
     in
-    div [ class "w-full" ]
-        (radioButtons
-            timePrepIsSelected
-            showTimePreposition
-            updateTimePreposition
-            model
-            [ Before, TimeAt, After ]
-        )
+    radioButtons
+        timePrepIsSelected
+        showTimePreposition
+        updateTimePreposition
+        model
+        [ Before, TimeAt, After ]
 
 
 timeInput : Model -> Html Msg
 timeInput model =
-    div
-        [ class "flex flex-col flex-grow items-center w-full"
-        ]
-        [ div [ class style.inputContainer ]
-            [ input
-                [ value model.timeText
-                , class <| Forms.input ++ " w-full"
-                , placeholder "breakfast"
-                , attribute "autocapitalize" "none"
-                , onInput UpdateTimeText
-                , id "time-input"
-                ]
-                []
-            ]
-        , label [ for "time-input", class Typography.label ]
-            [ text "time of day"
-            ]
-        ]
+    madLibInput "time-input" "breakfast" "time of day" model.timeText UpdateTimeText
 
 
 placeForm : Model -> Html Msg
 placeForm model =
-    div [ class "flex flex-col items-baseline w-full" ]
-        [ placeInputs model
-        , placeInput model
-        ]
+    prepositionInputForm placeRadios placeInput model
 
 
-placeInputs : Model -> Html Msg
-placeInputs model =
+placeRadios : Model -> Html Msg
+placeRadios model =
     let
         placePrepIsSelected prep =
             model.placePreposition == prep
@@ -396,41 +371,52 @@ placeInputs model =
         updatePlacePreposition str =
             UpdatePlacePreposition <| stringToPlacePreposition str
     in
-    div [ class "w-full" ]
-        (radioButtons
-            placePrepIsSelected
-            showPlacePreposition
-            updatePlacePreposition
-            model
-            [ In, PlaceAt, On ]
-        )
+    radioButtons
+        placePrepIsSelected
+        showPlacePreposition
+        updatePlacePreposition
+        model
+        [ In, PlaceAt, On ]
 
 
 placeInput : Model -> Html Msg
 placeInput model =
-    div
-        [ class "flex flex-col flex-grow items-center w-full"
+    madLibInput "place-input" "my living room" "location" model.placeText UpdatePlaceText
+
+
+prepositionInputForm : (Model -> Html msg) -> (Model -> Html msg) -> Model -> Html msg
+prepositionInputForm radios madlib model =
+    div [ class style.prepositionInputForm ]
+        [ radios model
+        , madlib model
         ]
+
+
+madLibInput : String -> String -> String -> String -> (String -> msg) -> Html msg
+madLibInput i ph subtext v updateInput =
+    div
+        [ class style.madLibInput ]
         [ div [ class style.inputContainer ]
             [ input
-                [ value model.placeText
+                [ value v
                 , class <| Forms.input ++ " w-full"
-                , placeholder "my living room"
+                , placeholder ph
                 , attribute "autocapitalize" "none"
-                , onInput UpdatePlaceText
-                , id "place-input"
+                , onInput updateInput
+                , id i
                 ]
                 []
             ]
-        , label [ for "place-input", class Typography.label ]
-            [ text "location"
+        , label [ for i, class Typography.label ]
+            [ text subtext
             ]
         ]
 
 
-radioButtons : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> List p -> List (Html msg)
+radioButtons : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> List p -> Html msg
 radioButtons isSelected showPreposition updatePrep model prepositions =
-    List.map (radioButton isSelected showPreposition updatePrep model) prepositions
+    div [ class style.radioButtonsContainer ]
+        (List.map (radioButton isSelected showPreposition updatePrep model) prepositions)
 
 
 radioButton : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> p -> Html msg
@@ -442,7 +428,13 @@ radioButton isSelected show updatePrep model prep =
         c =
             isSelected prep
     in
-    label [ classList [ ( "radio-input border p-2", True ), ( "bg-blue-100", c ) ] ]
+    label
+        [ classList
+            [ ( style.preposition, True )
+            , ( style.prepositionSelected, c )
+            , ( style.prepositionUnselected, not c )
+            ]
+        ]
         [ input
             [ type_ "radio"
             , value p
@@ -460,11 +452,13 @@ radioButton isSelected show updatePrep model prep =
 ---- STYLES ----
 
 
-type alias Style =
-    { inputContainer : String
-    }
-
-
 style =
-    { inputContainer = "border-b border-gray-800 mb-2 w-full"
+    { habitForm = "flex flex-col justify-between"
+    , prepositionInputForm = "flex flex-col items-baseline w-full"
+    , radioButtonsContainer = "self-center pb-2"
+    , preposition = "radio-input border border-purple-700 rounded text-sm py-2 px-4 mr-2"
+    , prepositionSelected = "bg-purple-700 text-white"
+    , prepositionUnselected = "text-gray-900"
+    , inputContainer = "border-b border-gray-800 my-4 w-full"
+    , madLibInput = "flex flex-col flex-grow items-center w-full"
     }
