@@ -188,8 +188,7 @@ update model msg ctx nav =
     case msg of
         HandleOnTapCancel ->
             { nextCtx = ctx
-            , nextNav =
-                { nav | currentRoute = Route.Dashboard }
+            , nextNav = { nav | currentRoute = Route.Dashboard }
             , nextModel = model
             , nextSubMsg = Cmd.none
             }
@@ -267,11 +266,9 @@ port createHabitLocally : Encode.Value -> Cmd msg
 
 view : Model -> Html Msg
 view model =
-    fixedContent
-        [ div [ class "flex flex-col h-full" ]
-            [ header model
-            , habitForm model
-            ]
+    main_ [ class "max-w-lg m-auto flex flex-col pt-8 pb-8 px-4" ]
+        [ header model
+        , habitForm model
         ]
 
 
@@ -282,7 +279,7 @@ header model =
             [ class "self-start w-min-c h-min-c py-3"
             , onClick HandleOnTapCancel
             ]
-            [ div [ class "text-red-400 font-bold" ] [ Icons.x Colors.black 30 ] ]
+            [ div [ class "text-red-400 font-bold" ] [ Icons.x Colors.gray 30 ] ]
         , div [ class "h-8" ] [ errorMsg model.errorMsg ]
         , button
             [ class "self-end w-min-c h-min-c py-3"
@@ -300,7 +297,7 @@ errorMsg str =
 
 habitForm : Model -> Html Msg
 habitForm model =
-    div [ class "flex flex-col justify-between h-56" ]
+    div [ class style.habitForm ]
         [ habitInput model
         , timeForm model
         , placeForm model
@@ -309,144 +306,133 @@ habitForm model =
 
 habitInput : Model -> Html Msg
 habitInput model =
-    div [ class "flex flex-row items-baseline" ]
-        [ div [ class <| Typography.label ++ " text-center mr-4" ] [ text "I will" ]
-        , div
-            [ class "flex flex-col flex-grow items-center" ]
-            [ div [ class style.inputContainer ]
-                [ input
-                    [ value model.habitText
-                    , class <| Forms.input ++ " w-full"
-                    , placeholder "put on running shoes"
-                    , attribute "autocapitalize" "none"
-                    , onInput UpdateHabitText
-                    , id "habit-input"
-                    ]
-                    []
-                ]
-            , label [ for "habit-input", class Typography.label ]
-                [ text "activity"
-                ]
-            ]
+    div []
+        [ div [ class <| Typography.label ++ " font-bold text-2xl mb-3" ] [ text "I will…" ]
+        , madlib "input-input"
+            "put on my running shoes"
+            "habit"
+            model.habitText
+            UpdateHabitText
         ]
 
 
 timeForm : Model -> Html Msg
 timeForm model =
-    div [ class "flex flex-col items-baseline w-full" ]
-        [ div [ class "w-full" ]
-            [ timeRadio model Before
-            , timeRadio model TimeAt
-            , timeRadio model After
-            ]
-        , timeInput model
-        ]
+    prepositionInputForm timeRadios timeInput model
 
 
-timeRadio : Model -> TimePreposition -> Html Msg
-timeRadio model preposition =
+timeRadios : Model -> Html Msg
+timeRadios model =
     let
-        p =
-            showTimePreposition preposition
-
-        c =
-            model.timePreposition == preposition
+        timePrepIsSelected prep =
+            model.timePreposition == prep
 
         updateTimePreposition str =
             UpdateTimePreposition <| stringToTimePreposition str
     in
-    label [ class "radio-input" ]
-        [ input
-            [ type_ "radio"
-            , value p
-            , name "time"
-            , id p
-            , onInput updateTimePreposition
-            , checked c
-            ]
-            []
-        , span [] [ text p ]
-        ]
+    radioButtons
+        timePrepIsSelected
+        showTimePreposition
+        updateTimePreposition
+        model
+        [ Before, TimeAt, After ]
 
 
 timeInput : Model -> Html Msg
 timeInput model =
-    div
-        [ class "flex flex-col flex-grow items-center w-full"
-        ]
-        [ div [ class style.inputContainer ]
-            [ input
-                [ value model.timeText
-                , class <| Forms.input ++ " w-full"
-                , placeholder "breakfast"
-                , attribute "autocapitalize" "none"
-                , onInput UpdateTimeText
-                , id "time-input"
-                ]
-                []
-            ]
-        , label [ for "time-input", class Typography.label ]
-            [ text "time of day"
-            ]
-        ]
+    madlib "time-input" "breakfast" "time of day" model.timeText UpdateTimeText
 
 
 placeForm : Model -> Html Msg
 placeForm model =
-    div [ class "flex flex-col items-baseline w-full" ]
-        [ div [ class "w-full" ]
-            [ placeRadio model In
-            , placeRadio model PlaceAt
-            , placeRadio model On
-            ]
-        , placeInput model
-        ]
+    prepositionInputForm placeRadios placeInput model
 
 
-placeRadio : Model -> PlacePreposition -> Html Msg
-placeRadio model preposition =
+placeRadios : Model -> Html Msg
+placeRadios model =
     let
-        p =
-            showPlacePreposition preposition
-
-        c =
-            model.placePreposition == preposition
+        placePrepIsSelected prep =
+            model.placePreposition == prep
 
         updatePlacePreposition str =
             UpdatePlacePreposition <| stringToPlacePreposition str
     in
-    label [ class "radio-input" ]
-        [ input
-            [ type_ "radio"
-            , value p
-            , name "place"
-            , id p
-            , onInput updatePlacePreposition
-            , checked c
-            ]
-            []
-        , span [] [ text p ]
-        ]
+    radioButtons
+        placePrepIsSelected
+        showPlacePreposition
+        updatePlacePreposition
+        model
+        [ In, PlaceAt, On ]
 
 
 placeInput : Model -> Html Msg
 placeInput model =
-    div
-        [ class "flex flex-col flex-grow items-center w-full"
+    madlib "place-input" "my living room" "location" model.placeText UpdatePlaceText
+
+
+prepositionInputForm : (Model -> Html msg) -> (Model -> Html msg) -> Model -> Html msg
+prepositionInputForm radios ml model =
+    div [ class style.prepositionInputForm ]
+        [ radios model
+        , ml model
         ]
-        [ div [ class style.inputContainer ]
+
+
+madlib : String -> String -> String -> String -> (String -> msg) -> Html msg
+madlib i ph subtext v updateInput =
+    div
+        [ class style.madlib ]
+        [ input
+            [ value v
+            , class style.input
+            , placeholder ph
+            , attribute "autocapitalize" "none"
+            , onInput updateInput
+            , id i
+            ]
+            []
+        ]
+
+
+radioButtons : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> List p -> Html msg
+radioButtons isSelected showPreposition updatePrep model prepositions =
+    div [ class style.radioButtonsContainer ]
+        (List.map (radioButton isSelected showPreposition updatePrep model) prepositions)
+
+
+radioButton : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> p -> Html msg
+radioButton isSelected show updatePrep model prep =
+    let
+        p =
+            show prep
+
+        c =
+            isSelected prep
+    in
+    div
+        [ classList
+            [ ( style.radioButtonContainer, True )
+            , ( style.radioButtonContainerSelected, c )
+            , ( style.radioButtonContainerUnselected, not c )
+            ]
+        ]
+        [ label
+            [ classList
+                [ ( style.radioButton, True )
+                , ( style.radioButtonSelected, c )
+                , ( style.radioButtonUnselected, not c )
+                ]
+            ]
             [ input
-                [ value model.placeText
-                , class <| Forms.input ++ " w-full"
-                , placeholder "my living room"
-                , attribute "autocapitalize" "none"
-                , onInput UpdatePlaceText
-                , id "place-input"
+                [ type_ "radio"
+                , value p
+                , name "time"
+                , id p
+                , onInput updatePrep
+                , checked c
                 ]
                 []
-            ]
-        , label [ for "place-input", class Typography.label ]
-            [ text "location"
+            , span [] [ text p ]
             ]
         ]
 
@@ -455,11 +441,18 @@ placeInput model =
 ---- STYLES ----
 
 
-type alias Style =
-    { inputContainer : String
-    }
-
-
 style =
-    { inputContainer = "border-b border-gray-800 mb-2 w-full"
+    { habitForm = "grid gap-y-16"
+    , prepositionInputForm = "flex flex-col items-baseline w-full"
+    , radioButtonsContainer = "w-full grid grid-cols-3 gap-4 pb-6"
+    , radioButtonContainer = "flex justify-center items-center rounded py-3"
+    , radioButtonContainerSelected = "bg-purple-300"
+    , radioButtonContainerUnselected = "bg-purple-100"
+    , radioButton = "radio-container text-sm text-gray-800 font-mono"
+    , radioButtonSelected = "font-bold"
+    , radioButtonUnselected = ""
+    , input = Forms.input ++ " border-2 border-gray-500 w-full py-3 px-4 mb-2 rounded"
+    , inputLabel = "text-xs font-mono text-gray-600 self-start"
+    , madlib = "flex flex-col flex-grow items-center w-full"
+    , divider = "justify-self-center"
     }

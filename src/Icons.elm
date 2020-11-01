@@ -24,6 +24,16 @@ plus color size =
         ]
 
 
+plusThin : String -> Int -> Html msg
+plusThin color size =
+    svgFeatherIcon color
+        size
+        1
+        [ Svg.line [ x1 "12", y1 "5", x2 "12", y2 "19" ] []
+        , Svg.line [ x1 "5", y1 "12", x2 "19", y2 "12" ] []
+        ]
+
+
 plusCircle : String -> Int -> Html msg
 plusCircle color size =
     svgFeatherIcon color

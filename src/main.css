@@ -37,6 +37,7 @@ textarea, input {
 
 ::placeholder {
   font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: #718096;
 }
 
 .break-anywhere {
@@ -47,7 +48,10 @@ textarea, input {
   width: min-content;
 }
 
-.radio-input input:checked ~ span {
-  background-color: #6b46c1;
+.radio-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
 }
-
