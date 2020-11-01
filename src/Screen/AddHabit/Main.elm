@@ -188,8 +188,7 @@ update model msg ctx nav =
     case msg of
         HandleOnTapCancel ->
             { nextCtx = ctx
-            , nextNav =
-                { nav | currentRoute = Route.Dashboard }
+            , nextNav = { nav | currentRoute = Route.Dashboard }
             , nextModel = model
             , nextSubMsg = Cmd.none
             }
@@ -334,39 +333,28 @@ habitInput model =
 timeForm : Model -> Html Msg
 timeForm model =
     div [ class "flex flex-col items-baseline w-full" ]
-        [ div [ class "w-full" ]
-            [ timeRadio model Before
-            , timeRadio model TimeAt
-            , timeRadio model After
-            ]
+        [ timeRadios model
         , timeInput model
         ]
 
 
-timeRadio : Model -> TimePreposition -> Html Msg
-timeRadio model preposition =
+timeRadios : Model -> Html Msg
+timeRadios model =
     let
-        p =
-            showTimePreposition preposition
-
-        c =
-            model.timePreposition == preposition
+        timePrepIsSelected prep =
+            model.timePreposition == prep
 
         updateTimePreposition str =
             UpdateTimePreposition <| stringToTimePreposition str
     in
-    label [ class "radio-input" ]
-        [ input
-            [ type_ "radio"
-            , value p
-            , name "time"
-            , id p
-            , onInput updateTimePreposition
-            , checked c
-            ]
-            []
-        , span [] [ text p ]
-        ]
+    div [ class "w-full" ]
+        (radioButtons
+            timePrepIsSelected
+            showTimePreposition
+            updateTimePreposition
+            model
+            [ Before, TimeAt, After ]
+        )
 
 
 timeInput : Model -> Html Msg
@@ -394,39 +382,28 @@ timeInput model =
 placeForm : Model -> Html Msg
 placeForm model =
     div [ class "flex flex-col items-baseline w-full" ]
-        [ div [ class "w-full" ]
-            [ placeRadio model In
-            , placeRadio model PlaceAt
-            , placeRadio model On
-            ]
+        [ placeInputs model
         , placeInput model
         ]
 
 
-placeRadio : Model -> PlacePreposition -> Html Msg
-placeRadio model preposition =
+placeInputs : Model -> Html Msg
+placeInputs model =
     let
-        p =
-            showPlacePreposition preposition
-
-        c =
-            model.placePreposition == preposition
+        placePrepIsSelected prep =
+            model.placePreposition == prep
 
         updatePlacePreposition str =
             UpdatePlacePreposition <| stringToPlacePreposition str
     in
-    label [ class "radio-input" ]
-        [ input
-            [ type_ "radio"
-            , value p
-            , name "place"
-            , id p
-            , onInput updatePlacePreposition
-            , checked c
-            ]
-            []
-        , span [] [ text p ]
-        ]
+    div [ class "w-full" ]
+        (radioButtons
+            placePrepIsSelected
+            showPlacePreposition
+            updatePlacePreposition
+            model
+            [ In, PlaceAt, On ]
+        )
 
 
 placeInput : Model -> Html Msg
@@ -448,6 +425,34 @@ placeInput model =
         , label [ for "place-input", class Typography.label ]
             [ text "location"
             ]
+        ]
+
+
+radioButtons : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> List p -> List (Html msg)
+radioButtons isSelected showPreposition updatePrep model prepositions =
+    List.map (radioButton isSelected showPreposition updatePrep model) prepositions
+
+
+radioButton : (p -> Bool) -> (p -> String) -> (String -> msg) -> Model -> p -> Html msg
+radioButton isSelected show updatePrep model prep =
+    let
+        p =
+            show prep
+
+        c =
+            isSelected prep
+    in
+    label [ classList [ ( "radio-input border p-2", True ), ( "bg-blue-100", c ) ] ]
+        [ input
+            [ type_ "radio"
+            , value p
+            , name "time"
+            , id p
+            , onInput updatePrep
+            , checked c
+            ]
+            []
+        , span [] [ text p ]
         ]
 
 
