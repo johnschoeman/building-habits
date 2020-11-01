@@ -268,6 +268,7 @@ view : Model -> Html Msg
 view model =
     main_ [ class "max-w-lg m-auto flex flex-col pt-8 pb-8 px-4" ]
         [ header model
+        , habitPreview model
         , habitForm model
         ]
 
@@ -295,6 +296,18 @@ errorMsg str =
     div [ class <| Typography.error ++ " w-full text-center" ] [ text str ]
 
 
+habitPreview : Model -> Html msg
+habitPreview model =
+    let
+        habit =
+            modelToHabit model
+
+        habitTitle =
+            habit.title
+    in
+    div [ class style.habitPreview ] [ text habitTitle ]
+
+
 habitForm : Model -> Html Msg
 habitForm model =
     div [ class style.habitForm ]
@@ -307,7 +320,9 @@ habitForm model =
 habitInput : Model -> Html Msg
 habitInput model =
     div []
-        [ div [ class <| Typography.label ++ " font-bold text-2xl mb-3" ] [ text "I will…" ]
+        [ div [ class style.iWillTextContainer ]
+            [ div [ class style.iWillText ] [ text "I will" ]
+            ]
         , madlib "input-input"
             "put on my running shoes"
             "habit"
@@ -442,16 +457,19 @@ radioButton isSelected show updatePrep model prep =
 
 
 style =
-    { habitForm = "grid gap-y-16"
+    { habitPreview = "min-h-16 border-b mb-4 pb-2"
+    , iWillTextContainer = "flex justify-center items-center rounded py-3 bg-purple-300 mb-4"
+    , iWillText = "text-sm text-gray-800 font-mono font-bold text-gray-800"
+    , habitForm = "grid gap-y-4"
     , prepositionInputForm = "flex flex-col items-baseline w-full"
-    , radioButtonsContainer = "w-full grid grid-cols-3 gap-4 pb-6"
+    , radioButtonsContainer = "w-full grid grid-cols-3 gap-4 pb-4"
     , radioButtonContainer = "flex justify-center items-center rounded py-3"
     , radioButtonContainerSelected = "bg-purple-300"
     , radioButtonContainerUnselected = "bg-purple-100"
     , radioButton = "radio-container text-sm text-gray-800 font-mono"
     , radioButtonSelected = "font-bold"
     , radioButtonUnselected = ""
-    , input = Forms.input ++ " border-2 border-gray-500 w-full py-3 px-4 mb-2 rounded"
+    , input = Forms.input ++ " border-2 border-gray-500 w-full py-3 px-4 mb-2 rounded text-center"
     , inputLabel = "text-xs font-mono text-gray-600 self-start"
     , madlib = "flex flex-col flex-grow items-center w-full"
     , divider = "justify-self-center"
