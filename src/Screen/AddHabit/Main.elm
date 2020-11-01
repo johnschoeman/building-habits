@@ -281,7 +281,7 @@ header model =
             [ class "self-start w-min-c h-min-c py-3"
             , onClick HandleOnTapCancel
             ]
-            [ div [ class "text-red-400 font-bold" ] [ Icons.x Colors.black 30 ] ]
+            [ div [ class "text-red-400 font-bold" ] [ Icons.x Colors.gray 30 ] ]
         , div [ class "h-8" ] [ errorMsg model.errorMsg ]
         , button
             [ class "self-end w-min-c h-min-c py-3"
@@ -308,25 +308,13 @@ habitForm model =
 
 habitInput : Model -> Html Msg
 habitInput model =
-    div [ class "flex flex-row items-baseline" ]
-        [ div [ class <| Typography.label ++ " text-center mr-4" ] [ text "I will" ]
-        , div
-            [ class "flex flex-col flex-grow items-center" ]
-            [ div [ class style.inputContainer ]
-                [ input
-                    [ value model.habitText
-                    , class <| Forms.input ++ " w-full"
-                    , placeholder "put on running shoes"
-                    , attribute "autocapitalize" "none"
-                    , onInput UpdateHabitText
-                    , id "habit-input"
-                    ]
-                    []
-                ]
-            , label [ for "habit-input", class Typography.label ]
-                [ text "activity"
-                ]
-            ]
+    div []
+        [ div [ class <| Typography.label ++ " font-bold text-2xl mb-3" ] [ text "I will…" ]
+        , madlib "input-input"
+            "put on my running shoes"
+            "habit"
+            model.habitText
+            UpdateHabitText
         ]
 
 
@@ -354,7 +342,7 @@ timeRadios model =
 
 timeInput : Model -> Html Msg
 timeInput model =
-    madLibInput "time-input" "breakfast" "time of day" model.timeText UpdateTimeText
+    madlib "time-input" "breakfast" "time of day" model.timeText UpdateTimeText
 
 
 placeForm : Model -> Html Msg
@@ -381,35 +369,30 @@ placeRadios model =
 
 placeInput : Model -> Html Msg
 placeInput model =
-    madLibInput "place-input" "my living room" "location" model.placeText UpdatePlaceText
+    madlib "place-input" "my living room" "location" model.placeText UpdatePlaceText
 
 
 prepositionInputForm : (Model -> Html msg) -> (Model -> Html msg) -> Model -> Html msg
-prepositionInputForm radios madlib model =
+prepositionInputForm radios ml model =
     div [ class style.prepositionInputForm ]
         [ radios model
-        , madlib model
+        , ml model
         ]
 
 
-madLibInput : String -> String -> String -> String -> (String -> msg) -> Html msg
-madLibInput i ph subtext v updateInput =
+madlib : String -> String -> String -> String -> (String -> msg) -> Html msg
+madlib i ph subtext v updateInput =
     div
-        [ class style.madLibInput ]
-        [ div [ class style.inputContainer ]
-            [ input
-                [ value v
-                , class <| Forms.input ++ " w-full"
-                , placeholder ph
-                , attribute "autocapitalize" "none"
-                , onInput updateInput
-                , id i
-                ]
-                []
+        [ class style.madlib ]
+        [ input
+            [ value v
+            , class style.input
+            , placeholder ph
+            , attribute "autocapitalize" "none"
+            , onInput updateInput
+            , id i
             ]
-        , label [ for i, class Typography.label ]
-            [ text subtext
-            ]
+            []
         ]
 
 
@@ -430,9 +413,9 @@ radioButton isSelected show updatePrep model prep =
     in
     label
         [ classList
-            [ ( style.preposition, True )
-            , ( style.prepositionSelected, c )
-            , ( style.prepositionUnselected, not c )
+            [ ( style.radioButton, True )
+            , ( style.radioButtonSelected, c )
+            , ( style.radioButtonUnselected, not c )
             ]
         ]
         [ input
@@ -453,12 +436,14 @@ radioButton isSelected show updatePrep model prep =
 
 
 style =
-    { habitForm = "flex flex-col justify-between"
+    { habitForm = "grid gap-y-16"
     , prepositionInputForm = "flex flex-col items-baseline w-full"
-    , radioButtonsContainer = "self-center pb-2"
-    , preposition = "radio-input border border-purple-700 rounded text-sm py-2 px-4 mr-2"
-    , prepositionSelected = "bg-purple-700 text-white"
-    , prepositionUnselected = "text-gray-900"
-    , inputContainer = "border-b border-gray-800 my-4 w-full"
-    , madLibInput = "flex flex-col flex-grow items-center w-full"
+    , radioButtonsContainer = "w-full grid grid-cols-3 gap-8 pb-6"
+    , radioButton = " rounded text-sm text-center text-gray-800 font-mono py-3 px-4"
+    , radioButtonSelected = "bg-purple-300 font-bold"
+    , radioButtonUnselected = "bg-purple-100"
+    , input = Forms.input ++ " border-2 border-gray-500 w-full py-3 px-4 mb-2 rounded"
+    , inputLabel = "text-xs font-mono text-gray-600 self-start"
+    , madlib = "flex flex-col flex-grow items-center w-full"
+    , divider = "justify-self-center"
     }

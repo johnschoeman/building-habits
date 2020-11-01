@@ -18,7 +18,7 @@ body1 =
 
 textInput : String
 textInput =
-    "font-mono leading-tight text-sm text-gray-800"
+    "font-mono leading-tight text-base text-gray-800"
 
 
 placeholder : String

@@ -7,6 +7,10 @@ module.exports = {
       height: {
         80: "20rem",
       },
+      gridTemplateColumns: {
+        "2-1": "2fr 1fr",
+        "3-1": "3fr 1fr",
+      },
     },
     flex: {
       1: "1 1 0%",
@@ -24,10 +28,6 @@ module.exports = {
       64: "16rem",
       screen: "100vh",
       full: "100%",
-    },
-    gridTemplateColumns: {
-      "2-1": "2fr 1fr",
-      "3-1": "3fr 1fr",
     },
     variants: {},
     plugins: [],

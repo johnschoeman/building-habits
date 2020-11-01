@@ -5,7 +5,7 @@ import Styles.Typography as Typography
 
 input : String
 input =
-    Typography.textInput ++ " text-center px-2 mb-2"
+    Typography.textInput ++ " px-2 mb-2"
 
 
 select : String
